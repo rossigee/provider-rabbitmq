@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -169,18 +170,31 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 
 	if err := kube.Get(ctx, types.NamespacedName{
 		Name:      pcName,
-		Namespace: mg.GetNamespace(),
 	}, pc); err != nil {
 		return nil, errors.Wrap(err, "cannot get ProviderConfig")
 	}
 
-	data, err := resource.CommonCredentialExtractor(ctx, pc.Spec.Credentials.Source, kube, pc.Spec.Credentials.CommonCredentialSelectors)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get credentials")
+	credSecret := &corev1.Secret{}
+	credRef := pc.Spec.Credentials.SecretRef
+	if credRef == nil {
+		return nil, errors.New("ProviderConfig credentials.secretRef is not set")
 	}
 
+	ns := "default"
+	if credRef.Namespace != "" {
+		ns = credRef.Namespace
+	}
+
+	if err := kube.Get(ctx, types.NamespacedName{
+		Name:      credRef.Name,
+		Namespace: ns,
+	}, credSecret); err != nil {
+		return nil, errors.Wrap(err, "cannot get credentials secret")
+	}
+
+	credData := string(credSecret.Data[credRef.Key])
 	var secretData map[string]string
-	if err := json.Unmarshal(data, &secretData); err != nil {
+	if err := json.Unmarshal([]byte(credData), &secretData); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal credentials")
 	}
 
@@ -256,7 +270,7 @@ func (c *rabbitmqClient) request(ctx context.Context, method, path string, body 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute request")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		errBody, _ := io.ReadAll(resp.Body)

@@ -3,4 +3,4 @@ kind: Provider
 metadata:
   name: provider-rabbitmq
 spec:
-  package: rossigee/provider-rabbitmq:latest
+  package: ghcr.io/rossigee/provider-rabbitmq:v0.1.0

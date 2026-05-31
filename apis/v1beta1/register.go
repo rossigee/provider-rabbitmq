@@ -21,7 +21,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Package type metadata.
@@ -31,11 +30,9 @@ const (
 )
 
 var (
-	// SchemeGroupVersion is group version used to register these objects
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
 // ProviderConfig type metadata.
@@ -54,13 +51,10 @@ var (
 	ProviderConfigUsageGroupVersionKind = SchemeGroupVersion.WithKind(ProviderConfigUsageKind)
 )
 
-
-func init() {
-	SchemeBuilder.Register(&ProviderConfig{}, &ProviderConfigList{})
-	SchemeBuilder.Register(&ProviderConfigUsage{}, &ProviderConfigUsageList{})
-}
-
-// AddToScheme adds all types of this group into the given scheme.
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&ProviderConfig{}, &ProviderConfigList{},
+		&ProviderConfigUsage{}, &ProviderConfigUsageList{},
+	)
+	return nil
 }
