@@ -22,12 +22,12 @@ repos:
         language: system
         pass_filenames: false
 
-      - id: mailgun-specific-checks
-        name: Check for Mailgun API keys
+      - id: no-rabbitmq-credentials
+        name: Check for RabbitMQ credentials in code
         entry: |
           bash -c '
-          if grep -r -E "key-[a-f0-9]{32}-[a-f0-9]{8}-[a-f0-9]{8}" --include="*.go" --include="*.yaml" --include="*.yml" --include="*.py" .; then
-            echo "❌ Mailgun API key pattern detected"
+          if grep -r -E "(username|password)\s*[:=]\s*[\"'"'"'][^\"'"'"']{8,}" --include="*.go" --include="*.yaml" --include="*.yml" .; then
+            echo "❌ Potential RabbitMQ credentials detected in code"
             exit 1
           fi
           '

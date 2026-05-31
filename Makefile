@@ -133,13 +133,9 @@ test-working:
 
 test-standalone:
 	go test ./internal/clients -run TestStandalone -v
-	go test ./internal/clients -run TestMailgunAPISimulation -v
 
 test-controller:
-	go test ./internal/controller/domain -v
-	go test ./internal/controller/mailinglist -v
-	go test ./internal/controller/webhook -v
-	go test ./internal/controller/route -v
+	go test ./internal/controller/... -v
 
 test-integration:
 	go test ./test/integration -v

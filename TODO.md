@@ -40,7 +40,7 @@ Create a Crossplane provider for RabbitMQ that manages resources on external Rab
 - Fixed `GetConfig` to use `resource.CommonCredentialExtractor` instead of broken kube.Get approach
 - Fixed duplicate import in `cmd/provider/main.go`
 - Fixed unused variable/import warnings in controllers
-- Removed leftover mailgun artefacts
+- Removed all mailgun artefacts; fully renamed to provider-rabbitmq
 
 ## Next Steps
 
