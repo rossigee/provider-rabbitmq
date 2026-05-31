@@ -19,10 +19,10 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"runtime"
+	goruntime "runtime"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -42,12 +42,13 @@ import (
 
 func main() {
 	var (
-		app                     = kingpin.New(filepath.Base(os.Args[0]), "RabbitMQ Crossplane provider").DefaultEnvars()
-		debug                   = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
-		syncInterval            = app.Flag("sync", "Sync interval controls how often all resources will be double checked for drift.").Short('s').Default("1h").Duration()
-		pollInterval            = app.Flag("poll", "Poll interval controls how often an individual resource should be checked for drift.").Default("1m").Duration()
-		leaderElection          = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
-		maxReconcileRate        = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may checked for drift from the desired state.").Default("100").Int()
+		app                      = kingpin.New(filepath.Base(os.Args[0]), "RabbitMQ Crossplane provider").DefaultEnvars()
+		debug                    = app.Flag("debug", "Run with debug logging.").Short('d').Bool()
+		pollInterval             = app.Flag("poll", "Poll interval controls how often an individual resource should be checked for drift.").Default("1m").Duration()
+		leaderElection           = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
+		maxReconcileRate         = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may be checked for drift from the desired state.").Default("100").Int()
+		metricsAddr              = app.Flag("metrics-addr", "The address the metrics endpoint binds to.").Default(":8080").String()
+		healthAddr               = app.Flag("health-addr", "The address the health endpoint binds to.").Default(":8081").String()
 		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Bool()
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -55,77 +56,65 @@ func main() {
 	zl := zap.New(zap.UseDevMode(*debug))
 	log := logging.NewLogrLogger(zl.WithName("provider-rabbitmq"))
 
-	// Always set a logger for controller-runtime, but adjust verbosity
 	if *debug {
-		// In debug mode, use full verbosity
 		ctrl.SetLogger(zl)
 	} else {
-		// In production mode, use a less verbose logger to avoid noise
 		ctrl.SetLogger(zl.WithValues("source", "controller-runtime").V(1))
 	}
 
-	// Log startup information with build and configuration details
 	log.Info("Provider starting up",
 		"provider", "provider-rabbitmq",
 		"version", version.Version,
-		"go-version", runtime.Version(),
-		"platform", runtime.GOOS+"/"+runtime.GOARCH,
-		"sync-interval", syncInterval.String(),
+		"go-version", goruntime.Version(),
+		"platform", goruntime.GOOS+"/"+goruntime.GOARCH,
 		"poll-interval", pollInterval.String(),
 		"max-reconcile-rate", *maxReconcileRate,
 		"leader-election", *leaderElection,
 		"management-policies", *enableManagementPolicies,
-		"debug-mode", *debug)
+	)
 
-	log.Debug("Detailed startup configuration",
-		"sync-interval", syncInterval.String(),
-		"poll-interval", pollInterval.String(),
-		"max-reconcile-rate", *maxReconcileRate)
-
-	cfg, err := ctrl.GetConfig()
-	kingpin.FatalIfError(err, "Cannot get API server rest config")
-
-	// Get the namespace to watch for resources
-	namespace, err := getWatchNamespace()
+	ns, err := getWatchNamespace()
 	kingpin.FatalIfError(err, "Cannot get watch namespace")
 
+	cfg, err := ctrl.GetConfig()
+	kingpin.FatalIfError(err, "Cannot get config")
+
+	scheme := kruntime.NewScheme()
+
+	cacheOpts := cache.Options{}
+	if ns != "" {
+		cacheOpts.DefaultNamespaces = map[string]cache.Config{ns: {}}
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		LeaderElection:                *leaderElection,
-		LeaderElectionID:              "crossplane-leader-election-provider-rabbitmq",
-		LeaderElectionResourceLock:    resourcelock.LeasesResourceLock,
-		Cache:                         cache.Options{DefaultNamespaces: map[string]cache.Config{namespace: {}}},
-		LeaderElectionReleaseOnCancel: true,
+		Scheme: scheme,
+		Cache:  cacheOpts,
 		Metrics: server.Options{
-			BindAddress: ":8080", // Single HTTP server for both metrics and health checks
+			BindAddress: *metricsAddr,
 		},
+		LeaderElection:         *leaderElection,
+		LeaderElectionID:       "crossplane-provider-rabbitmq",
+		HealthProbeBindAddress: *healthAddr,
 	})
 	kingpin.FatalIfError(err, "Cannot create controller manager")
 
-	// Add our APIs to the manager
 	kingpin.FatalIfError(apis.AddToScheme(mgr.GetScheme()), "Cannot add RabbitMQ APIs to scheme")
 
-	// Setup feature flags
 	featureFlags := &feature.Flags{}
 	if *enableManagementPolicies {
 		featureFlags.Enable(features.EnableAlphaManagementPolicies)
 	}
 
-	// Setup rate limiter
-	rateLimiter := ratelimiter.NewGlobal(*maxReconcileRate)
-
-	// Setup controller options
 	o := xpcontroller.Options{
 		Logger:                  log,
 		MaxConcurrentReconciles: *maxReconcileRate,
 		PollInterval:            *pollInterval,
-		GlobalRateLimiter:       rateLimiter,
+		GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
 		Features:                featureFlags,
 	}
 
-	// Setup all controllers
 	kingpin.FatalIfError(controller.Setup(mgr, o), "Cannot setup RabbitMQ controllers")
 
-	// Add health checks to the manager's built-in endpoints
 	healthChecker := health.NewHealthChecker(mgr.GetClient(), nil)
 	kingpin.FatalIfError(mgr.AddHealthzCheck("rabbitmq-provider", healthChecker.HealthzCheck), "Cannot add healthz check")
 	kingpin.FatalIfError(mgr.AddReadyzCheck("rabbitmq-provider", healthChecker.ReadyzCheck), "Cannot add readyz check")
@@ -134,11 +123,7 @@ func main() {
 	kingpin.FatalIfError(mgr.Start(ctrl.SetupSignalHandler()), "Cannot start controller manager")
 }
 
-// getWatchNamespace returns the namespace the operator should be watching for changes
 func getWatchNamespace() (string, error) {
-	ns, found := os.LookupEnv("WATCH_NAMESPACE")
-	if !found {
-		return "", nil
-	}
+	ns, _ := os.LookupEnv("WATCH_NAMESPACE")
 	return ns, nil
 }

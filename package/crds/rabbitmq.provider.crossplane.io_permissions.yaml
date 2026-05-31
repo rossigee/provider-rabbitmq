@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: permissions.
+  name: permissions.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
@@ -31,7 +31,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: A Permission is a namespaced managed resource that represents

@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: exchanges.
+  name: bindings.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Exchange
-    listKind: ExchangeList
-    plural: exchanges
-    singular: exchange
+    kind: Binding
+    listKind: BindingList
+    plural: bindings
+    singular: binding
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -31,11 +31,11 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Exchange is a namespaced managed resource that represents a
-          RabbitMQ Exchange.
+        description: A Binding is a namespaced managed resource that represents a
+          RabbitMQ Binding.
         properties:
           apiVersion:
             description: |-
@@ -55,49 +55,43 @@ spec:
           metadata:
             type: object
           spec:
-            description: A ExchangeSpec defines the desired state of a Exchange.
+            description: A BindingSpec defines the desired state of a Binding.
             properties:
               forProvider:
-                description: ExchangeParameters define the desired state of a RabbitMQ
-                  Exchange
+                description: BindingParameters define the desired state of a RabbitMQ
+                  Binding
                 properties:
                   arguments:
                     additionalProperties:
                       type: string
                     description: Arguments is a map of additional arguments for the
-                      exchange
+                      binding
                     type: object
-                  autoDelete:
-                    description: AutoDelete deletes the exchange when it has no subscribers
-                    type: boolean
-                  durable:
-                    default: true
-                    description: Durable survives broker restart
-                    type: boolean
-                  internal:
-                    description: Internal is true if the exchange is internal (cannot
-                      be directly published to)
-                    type: boolean
-                  name:
-                    description: Name is the name of the exchange
+                  destination:
+                    description: Destination is the destination queue or exchange
+                      name
                     type: string
-                  type:
-                    default: topic
-                    description: Type is the exchange type
+                  destinationType:
+                    default: queue
+                    description: DestinationType is the type of destination (queue
+                      or exchange)
                     enum:
-                    - direct
-                    - topic
-                    - fanout
-                    - headers
-                    - x-delayed-message
-                    - x-durable-delayed-message
+                    - queue
+                    - exchange
+                    type: string
+                  routingKey:
+                    description: RoutingKey is the routing key for the binding
+                    type: string
+                  source:
+                    description: Source is the source exchange name
                     type: string
                   vhost:
-                    description: VHost is the name of the virtual host to create the
-                      exchange in
+                    description: VHost is the name of the virtual host
                     type: string
                 required:
-                - name
+                - destination
+                - routingKey
+                - source
                 - vhost
                 type: object
               managementPolicies:
@@ -159,25 +153,23 @@ spec:
             - forProvider
             type: object
           status:
-            description: A ExchangeStatus represents the observed state of a Exchange.
+            description: A BindingStatus represents the observed state of a Binding.
             properties:
               atProvider:
-                description: ExchangeObservation reflects the observed state of a
-                  RabbitMQ Exchange
+                description: BindingObservation reflects the observed state of a RabbitMQ
+                  Binding
                 properties:
                   arguments:
                     additionalProperties:
                       type: string
                     type: object
-                  autoDelete:
-                    type: boolean
-                  durable:
-                    type: boolean
-                  internal:
-                    type: boolean
-                  name:
+                  destination:
                     type: string
-                  type:
+                  destinationType:
+                    type: string
+                  routingKey:
+                    type: string
+                  source:
                     type: string
                   vhost:
                     type: string

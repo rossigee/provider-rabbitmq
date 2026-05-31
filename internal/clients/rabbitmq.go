@@ -210,11 +210,21 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 	return cfg, nil
 }
 
-func IsNotFound(err error) bool {
-	if err == nil {
-		return false
+// NotFoundError is returned when a RabbitMQ API call returns HTTP 404.
+type NotFoundError struct {
+	Body string
+}
+
+func (e *NotFoundError) Error() string {
+	if e.Body != "" {
+		return "request failed with status 404: " + e.Body
 	}
-	return strings.Contains(err.Error(), "404")
+	return "request failed with status 404"
+}
+
+func IsNotFound(err error) bool {
+	var nfe *NotFoundError
+	return errors.As(err, &nfe)
 }
 
 func (c *rabbitmqClient) request(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
@@ -250,6 +260,9 @@ func (c *rabbitmqClient) request(ctx context.Context, method, path string, body 
 
 	if resp.StatusCode >= 400 {
 		errBody, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == 404 {
+			return nil, &NotFoundError{Body: strings.TrimSpace(string(errBody))}
+		}
 		if len(errBody) > 0 {
 			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, errBody)
 		}
@@ -370,7 +383,7 @@ func (c *rabbitmqClient) GetBinding(ctx context.Context, source, destination, vh
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf("request failed with status 404: binding not found")
+	return nil, &NotFoundError{Body: "binding not found"}
 }
 
 func (c *rabbitmqClient) CreateBinding(ctx context.Context, spec *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error) {
@@ -398,18 +411,29 @@ func (c *rabbitmqClient) DeleteBinding(ctx context.Context, source, destination,
 
 func (c *rabbitmqClient) GetUser(ctx context.Context, name string) (*userv1beta1.UserObservation, error) {
 	path := fmt.Sprintf("/api/users/%s", url.PathEscape(name))
-	_, err := c.request(ctx, "GET", path, nil)
+	data, err := c.request(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &userv1beta1.UserObservation{Name: name}, nil
+	var u struct {
+		Name string `json:"name"`
+		Tags string `json:"tags"`
+	}
+	if err := json.Unmarshal(data, &u); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal user")
+	}
+	obs := &userv1beta1.UserObservation{Name: u.Name}
+	if u.Tags != "" {
+		obs.Tags = strings.Split(u.Tags, ",")
+	}
+	return obs, nil
 }
 
 func (c *rabbitmqClient) CreateUser(ctx context.Context, spec *userv1beta1.UserParameters, password string) (*userv1beta1.UserObservation, error) {
 	path := fmt.Sprintf("/api/users/%s", url.PathEscape(spec.Name))
 	body := map[string]interface{}{
 		"password": password,
-		"tags":     spec.Tags,
+		"tags":     strings.Join(spec.Tags, ","),
 	}
 	_, err := c.request(ctx, "PUT", path, body)
 	if err != nil {

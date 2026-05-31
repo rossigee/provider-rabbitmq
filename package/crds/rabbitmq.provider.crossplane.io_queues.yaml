@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: bindings.
+  name: queues.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Binding
-    listKind: BindingList
-    plural: bindings
-    singular: binding
+    kind: Queue
+    listKind: QueueList
+    plural: queues
+    singular: queue
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -31,11 +31,11 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Binding is a namespaced managed resource that represents a
-          RabbitMQ Binding.
+        description: A Queue is a namespaced managed resource that represents a RabbitMQ
+          Queue.
         properties:
           apiVersion:
             description: |-
@@ -55,43 +55,58 @@ spec:
           metadata:
             type: object
           spec:
-            description: A BindingSpec defines the desired state of a Binding.
+            description: A QueueSpec defines the desired state of a Queue.
             properties:
               forProvider:
-                description: BindingParameters define the desired state of a RabbitMQ
-                  Binding
+                description: QueueParameters define the desired state of a RabbitMQ
+                  Queue
                 properties:
                   arguments:
                     additionalProperties:
                       type: string
                     description: Arguments is a map of additional arguments for the
-                      binding
+                      queue
                     type: object
-                  destination:
-                    description: Destination is the destination queue or exchange
-                      name
+                  autoDelete:
+                    description: AutoDelete deletes the queue when it has no consumers
+                    type: boolean
+                  durable:
+                    default: true
+                    description: Durable survives broker restart
+                    type: boolean
+                  exclusive:
+                    description: Exclusive is only accessible to the connection that
+                      declared it
+                    type: boolean
+                  expires:
+                    description: Expires sets the time (in milliseconds) after which
+                      a queue can be deleted if no consumers
+                    type: integer
+                  maxLength:
+                    description: MaxLength sets the maximum number of messages in
+                      the queue
+                    type: integer
+                  messageTTL:
+                    description: MessageTTL sets the TTL for messages in the queue
+                      (in milliseconds)
+                    type: integer
+                  name:
+                    description: Name is the name of the queue
                     type: string
-                  destinationType:
-                    default: queue
-                    description: DestinationType is the type of destination (queue
-                      or exchange)
+                  overflowBehavior:
+                    description: OverflowBehavior sets the behavior when the queue
+                      reaches its max length
                     enum:
-                    - queue
-                    - exchange
-                    type: string
-                  routingKey:
-                    description: RoutingKey is the routing key for the binding
-                    type: string
-                  source:
-                    description: Source is the source exchange name
+                    - drop-head
+                    - reject-publish
+                    - reject-publish-dlx
                     type: string
                   vhost:
-                    description: VHost is the name of the virtual host
+                    description: VHost is the name of the virtual host to create the
+                      queue in
                     type: string
                 required:
-                - destination
-                - routingKey
-                - source
+                - name
                 - vhost
                 type: object
               managementPolicies:
@@ -153,23 +168,35 @@ spec:
             - forProvider
             type: object
           status:
-            description: A BindingStatus represents the observed state of a Binding.
+            description: A QueueStatus represents the observed state of a Queue.
             properties:
               atProvider:
-                description: BindingObservation reflects the observed state of a RabbitMQ
-                  Binding
+                description: QueueObservation reflects the observed state of a RabbitMQ
+                  Queue
                 properties:
                   arguments:
                     additionalProperties:
                       type: string
                     type: object
-                  destination:
+                  autoDelete:
+                    type: boolean
+                  consumers:
+                    type: integer
+                  durable:
+                    type: boolean
+                  exclusive:
+                    type: boolean
+                  expires:
+                    type: integer
+                  maxLength:
+                    type: integer
+                  messageTTL:
+                    type: integer
+                  messages:
+                    type: integer
+                  name:
                     type: string
-                  destinationType:
-                    type: string
-                  routingKey:
-                    type: string
-                  source:
+                  overflowBehavior:
                     type: string
                   vhost:
                     type: string

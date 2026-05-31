@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: queues.
+  name: vhosts.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Queue
-    listKind: QueueList
-    plural: queues
-    singular: queue
+    kind: Vhost
+    listKind: VhostList
+    plural: vhosts
+    singular: vhost
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -31,11 +31,10 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Queue is a namespaced managed resource that represents a RabbitMQ
-          Queue.
+        description: A Vhost is a managed resource that represents a RabbitMQ Vhost.
         properties:
           apiVersion:
             description: |-
@@ -55,59 +54,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: A QueueSpec defines the desired state of a Queue.
+            description: A VhostSpec defines the desired state of a Vhost.
             properties:
               forProvider:
-                description: QueueParameters define the desired state of a RabbitMQ
-                  Queue
+                description: VhostParameters define the desired state of a RabbitMQ
+                  Vhost
                 properties:
-                  arguments:
-                    additionalProperties:
-                      type: string
-                    description: Arguments is a map of additional arguments for the
-                      queue
-                    type: object
-                  autoDelete:
-                    description: AutoDelete deletes the queue when it has no consumers
-                    type: boolean
-                  durable:
-                    default: true
-                    description: Durable survives broker restart
-                    type: boolean
-                  exclusive:
-                    description: Exclusive is only accessible to the connection that
-                      declared it
-                    type: boolean
-                  expires:
-                    description: Expires sets the time (in milliseconds) after which
-                      a queue can be deleted if no consumers
-                    type: integer
-                  maxLength:
-                    description: MaxLength sets the maximum number of messages in
-                      the queue
-                    type: integer
-                  messageTTL:
-                    description: MessageTTL sets the TTL for messages in the queue
-                      (in milliseconds)
-                    type: integer
+                  description:
+                    description: Description is an optional description for the vhost
+                    maxLength: 2000
+                    type: string
                   name:
-                    description: Name is the name of the queue
+                    description: Name is the name of the vhost to create
                     type: string
-                  overflowBehavior:
-                    description: OverflowBehavior sets the behavior when the queue
-                      reaches its max length
-                    enum:
-                    - drop-head
-                    - reject-publish
-                    - reject-publish-dlx
-                    type: string
-                  vhost:
-                    description: VHost is the name of the virtual host to create the
-                      queue in
-                    type: string
+                  tags:
+                    description: Tags is an optional set of tags for the vhost
+                    items:
+                      type: string
+                    type: array
                 required:
                 - name
-                - vhost
                 type: object
               managementPolicies:
                 default:
@@ -168,38 +134,26 @@ spec:
             - forProvider
             type: object
           status:
-            description: A QueueStatus represents the observed state of a Queue.
+            description: A VhostStatus represents the observed state of a Vhost.
             properties:
               atProvider:
-                description: QueueObservation reflects the observed state of a RabbitMQ
-                  Queue
+                description: VhostObservation reflects the observed state of a RabbitMQ
+                  Vhost
                 properties:
-                  arguments:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  autoDelete:
-                    type: boolean
-                  consumers:
-                    type: integer
-                  durable:
-                    type: boolean
-                  exclusive:
-                    type: boolean
-                  expires:
-                    type: integer
-                  maxLength:
-                    type: integer
-                  messageTTL:
-                    type: integer
-                  messages:
-                    type: integer
+                  description:
+                    description: Description is the vhost description
+                    type: string
                   name:
+                    description: Name is the vhost name
                     type: string
-                  overflowBehavior:
-                    type: string
-                  vhost:
-                    type: string
+                  tags:
+                    description: Tags associated with the vhost
+                    items:
+                      type: string
+                    type: array
+                  tracerPort:
+                    description: TracerPort is the port used for tracing
+                    type: integer
                 type: object
               conditions:
                 description: Conditions of the resource.

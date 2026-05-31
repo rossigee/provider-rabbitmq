@@ -108,23 +108,11 @@ run: go.build
 # Override test target to run working tests until API generation is fixed
 .PHONY: test-working test-standalone test-controller test-integration test-all
 test-working:
-	@echo "Running standalone client tests..."
-	@go test ./internal/clients -run TestStandalone -v
-	@echo ""
-	@echo "Running comprehensive API client tests..."
+	@echo "Running client tests..."
 	@go test ./internal/clients -v
 	@echo ""
-	@echo "Running controller domain tests..."
-	@go test ./internal/controller/domain -v
-	@echo ""
-	@echo "Running controller mailinglist tests..."
-	@go test ./internal/controller/mailinglist -v
-	@echo ""
-	@echo "Running controller webhook tests..."
-	@go test ./internal/controller/webhook -v
-	@echo ""
-	@echo "Running controller route tests..."
-	@go test ./internal/controller/route -v
+	@echo "Running controller tests..."
+	@go test ./internal/controller/... -v
 	@echo ""
 	@echo "Running integration tests..."
 	@go test ./test/integration -v

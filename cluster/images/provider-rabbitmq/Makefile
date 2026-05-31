@@ -23,10 +23,10 @@ img.build: ../../../_output/bin/$(PLATFORM)/provider
 
 img.build.shared:
 	@cp Dockerfile $(IMAGE_TEMP_DIR)
-	@cp -r $(OUTPUT_DIR)/bin/ $(IMAGE_TEMP_DIR)/
+	@cp $(OUTPUT_DIR)/bin/$(PLATFORM)/provider $(IMAGE_TEMP_DIR)/provider
 	@cp ../../../package/crossplane.yaml $(IMAGE_TEMP_DIR)/package.yaml
 	@cp -r ../../../package/crds $(IMAGE_TEMP_DIR)/crds
-	@docker buildx build $(BUILD_ARGS) --platform $(IMAGE_PLATFORM) --build-arg TARGETOS=$(TARGETOS) --build-arg TARGETARCH=$(TARGETARCH) -t $(IMAGE) $(IMAGE_TEMP_DIR)
+	@docker buildx build $(BUILD_ARGS) --platform $(IMAGE_PLATFORM) -t $(IMAGE) $(IMAGE_TEMP_DIR)
 
 # ====================================================================================
 # Image Publish

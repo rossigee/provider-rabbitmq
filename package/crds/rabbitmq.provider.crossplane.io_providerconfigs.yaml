@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: providerconfigs.
+  name: providerconfigs.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     kind: ProviderConfig
     listKind: ProviderConfigList
@@ -25,7 +25,7 @@ spec:
       name: SECRET-NAME
       priority: 1
       type: string
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: A ProviderConfig configures a RabbitMQ provider.
@@ -108,8 +108,37 @@ spec:
               endpoint:
                 description: |-
                   Endpoint is the RabbitMQ Management API endpoint URL.
-                  e.g., https://queues.bankrut.lan:15672
+                  Must use HTTPS. e.g., https://queues.example.com:15672
+                pattern: ^https://
                 type: string
+              tls:
+                description: |-
+                  TLS configures how the provider verifies the server's TLS certificate.
+                  TLS verification is always enforced; this field controls the CA bundle used.
+                properties:
+                  caBundleSecretRef:
+                    description: |-
+                      CABundleSecretRef references a secret key containing a PEM-encoded CA
+                      certificate bundle used to verify the server's TLS certificate.
+                      Required when the server uses a certificate issued by a private CA
+                      (e.g. one managed by trust-manager). When omitted the system CA pool
+                      is used.
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
+                type: object
             required:
             - credentials
             - endpoint

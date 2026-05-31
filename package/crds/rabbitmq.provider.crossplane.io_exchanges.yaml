@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: vhosts.
+  name: exchanges.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Vhost
-    listKind: VhostList
-    plural: vhosts
-    singular: vhost
+    kind: Exchange
+    listKind: ExchangeList
+    plural: exchanges
+    singular: exchange
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -31,10 +31,11 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Vhost is a managed resource that represents a RabbitMQ Vhost.
+        description: A Exchange is a namespaced managed resource that represents a
+          RabbitMQ Exchange.
         properties:
           apiVersion:
             description: |-
@@ -54,26 +55,50 @@ spec:
           metadata:
             type: object
           spec:
-            description: A VhostSpec defines the desired state of a Vhost.
+            description: A ExchangeSpec defines the desired state of a Exchange.
             properties:
               forProvider:
-                description: VhostParameters define the desired state of a RabbitMQ
-                  Vhost
+                description: ExchangeParameters define the desired state of a RabbitMQ
+                  Exchange
                 properties:
-                  description:
-                    description: Description is an optional description for the vhost
-                    maxLength: 2000
-                    type: string
-                  name:
-                    description: Name is the name of the vhost to create
-                    type: string
-                  tags:
-                    description: Tags is an optional set of tags for the vhost
-                    items:
+                  arguments:
+                    additionalProperties:
                       type: string
-                    type: array
+                    description: Arguments is a map of additional arguments for the
+                      exchange
+                    type: object
+                  autoDelete:
+                    description: AutoDelete deletes the exchange when it has no subscribers
+                    type: boolean
+                  durable:
+                    default: true
+                    description: Durable survives broker restart
+                    type: boolean
+                  internal:
+                    description: Internal is true if the exchange is internal (cannot
+                      be directly published to)
+                    type: boolean
+                  name:
+                    description: Name is the name of the exchange
+                    type: string
+                  type:
+                    default: topic
+                    description: Type is the exchange type
+                    enum:
+                    - direct
+                    - topic
+                    - fanout
+                    - headers
+                    - x-delayed-message
+                    - x-durable-delayed-message
+                    type: string
+                  vhost:
+                    description: VHost is the name of the virtual host to create the
+                      exchange in
+                    type: string
                 required:
                 - name
+                - vhost
                 type: object
               managementPolicies:
                 default:
@@ -134,26 +159,28 @@ spec:
             - forProvider
             type: object
           status:
-            description: A VhostStatus represents the observed state of a Vhost.
+            description: A ExchangeStatus represents the observed state of a Exchange.
             properties:
               atProvider:
-                description: VhostObservation reflects the observed state of a RabbitMQ
-                  Vhost
+                description: ExchangeObservation reflects the observed state of a
+                  RabbitMQ Exchange
                 properties:
-                  description:
-                    description: Description is the vhost description
-                    type: string
-                  name:
-                    description: Name is the vhost name
-                    type: string
-                  tags:
-                    description: Tags associated with the vhost
-                    items:
+                  arguments:
+                    additionalProperties:
                       type: string
-                    type: array
-                  tracerPort:
-                    description: TracerPort is the port used for tracing
-                    type: integer
+                    type: object
+                  autoDelete:
+                    type: boolean
+                  durable:
+                    type: boolean
+                  internal:
+                    type: boolean
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  vhost:
+                    type: string
                 type: object
               conditions:
                 description: Conditions of the resource.

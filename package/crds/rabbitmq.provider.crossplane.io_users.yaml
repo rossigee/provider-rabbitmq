@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: users.
+  name: users.rabbitmq.provider.crossplane.io
 spec:
-  group: ""
+  group: rabbitmq.provider.crossplane.io
   names:
     categories:
     - crossplane
@@ -31,7 +31,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: ""
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: A User is a namespaced managed resource that represents a RabbitMQ
@@ -64,12 +64,34 @@ spec:
                   name:
                     description: Name is the username
                     type: string
-                  password:
-                    description: Password is the user's password
-                    type: string
+                  passwordSecretRef:
+                    description: |-
+                      PasswordSecretRef references a secret key containing the user's password.
+                      The secret must exist in the same namespace as the User resource.
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
                   tags:
                     description: Tags are the RabbitMQ tags for the user (administrator,
                       monitoring, policymaker, management)
+                    enum:
+                    - administrator
+                    - monitoring
+                    - policymaker
+                    - management
+                    - impersonator
                     items:
                       type: string
                     type: array

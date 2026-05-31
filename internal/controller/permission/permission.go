@@ -79,7 +79,9 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	cr.Status.AtProvider = *perm
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	sp := cr.Spec.ForProvider
+	upToDate := perm.Configure == sp.Configure && perm.Write == sp.Write && perm.Read == sp.Read
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -98,7 +100,14 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalCreation{}, nil
 }
 
-func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) { return managed.ExternalUpdate{}, nil }
+func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Permission)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotPermission)
+	}
+	_, err := c.service.SetPermission(ctx, &cr.Spec.ForProvider)
+	return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update permission")
+}
 
 func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
 	cr, ok := mg.(*v1beta1.Permission)

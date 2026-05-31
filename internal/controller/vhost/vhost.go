@@ -31,7 +31,6 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 
 	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
-	apisv1beta1 "github.com/rossigee/provider-rabbitmq/apis/v1beta1"
 	clients "github.com/rossigee/provider-rabbitmq/internal/clients"
 )
 
@@ -68,41 +67,17 @@ type connector struct {
 }
 
 func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.ExternalClient, error) {
-	cr, ok := mg.(*v1beta1.Vhost)
-	if !ok {
+	if _, ok := mg.(*v1beta1.Vhost); !ok {
 		return nil, errors.New(errNotVhost)
 	}
-
 	if err := c.usage.Track(ctx, mg); err != nil {
 		return nil, errors.Wrap(err, "cannot track ProviderConfig usage")
 	}
-
-	pc := &apisv1beta1.ProviderConfig{}
-	pcRef := cr.GetProviderConfigReference()
-
-	pcName := "default"
-	if pcRef != nil && pcRef.Name != "" {
-		pcName = pcRef.Name
-	}
-
-	pcErr := c.kube.Get(ctx, client.ObjectKey{Name: pcName}, pc)
-	if pcErr != nil {
-		return nil, errors.Wrap(pcErr, "cannot get ProviderConfig")
-	}
-
-	_, err := resource.CommonCredentialExtractor(ctx, pc.Spec.Credentials.Source, c.kube, pc.Spec.Credentials.CommonCredentialSelectors)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot get credentials")
-	}
-
 	config, err := clients.GetConfig(ctx, c.kube, mg)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get config")
 	}
-
-	svc := c.newServiceFn(config)
-
-	return &external{service: svc}, nil
+	return &external{service: c.newServiceFn(config)}, nil
 }
 
 type external struct {

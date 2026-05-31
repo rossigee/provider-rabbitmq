@@ -84,7 +84,10 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 	}
 	cr.Status.AtProvider = *user
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return managed.ExternalObservation{
+		ResourceExists:   true,
+		ResourceUpToDate: equalStringSlices(cr.Spec.ForProvider.Tags, user.Tags),
+	}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -118,7 +121,39 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	return managed.ExternalCreation{}, nil
 }
 
-func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) { return managed.ExternalUpdate{}, nil }
+func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.User)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotUser)
+	}
+	password := ""
+	if cr.Spec.ForProvider.PasswordSecretRef != nil {
+		data, err := resource.CommonCredentialExtractor(
+			ctx,
+			xpv1.CredentialsSourceSecret,
+			c.kube,
+			xpv1.CommonCredentialSelectors{SecretRef: cr.Spec.ForProvider.PasswordSecretRef},
+		)
+		if err != nil {
+			return managed.ExternalUpdate{}, errors.Wrap(err, errResolvePassword)
+		}
+		password = string(data)
+	}
+	_, err := c.service.CreateUser(ctx, &cr.Spec.ForProvider, password)
+	return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update user")
+}
+
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
 
 func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.ExternalDelete, error) {
 	cr, ok := mg.(*v1beta1.User)
