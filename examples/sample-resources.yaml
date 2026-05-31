@@ -1,0 +1,92 @@
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: VHost
+metadata:
+  name: example-vhost
+  namespace: default
+spec:
+  forProvider:
+    name: example
+  providerConfigRef:
+    name: default
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: Exchange
+metadata:
+  name: example-exchange
+  namespace: default
+spec:
+  forProvider:
+    name: orders
+    vhost: example
+    type: direct
+  providerConfigRef:
+    name: default
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: Queue
+metadata:
+  name: example-queue
+  namespace: default
+spec:
+  forProvider:
+    name: orders.created
+    vhost: example
+    durable: true
+  providerConfigRef:
+    name: default
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: Binding
+metadata:
+  name: example-binding
+  namespace: default
+spec:
+  forProvider:
+    source: orders
+    destination: orders.created
+    vhost: example
+    routingKey: orders.created
+  providerConfigRef:
+    name: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-user-password
+  namespace: default
+type: Opaque
+stringData:
+  password: "REPLACE_ME"
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: User
+metadata:
+  name: example-user
+  namespace: default
+spec:
+  forProvider:
+    name: app-user
+    passwordSecretRef:
+      namespace: default
+      name: example-user-password
+      key: password
+    tags:
+      - monitoring
+  providerConfigRef:
+    name: default
+---
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: Permission
+metadata:
+  name: example-permission
+  namespace: default
+spec:
+  forProvider:
+    user: app-user
+    vhost: example
+    configure: ""
+    write: "orders.*"
+    read: "orders.*"
+  providerConfigRef:
+    name: default

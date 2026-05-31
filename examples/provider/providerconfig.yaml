@@ -1,0 +1,18 @@
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+spec:
+  endpoint: https://rabbitmq.example.com:15672
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: rabbitmq-credentials
+      key: credentials
+  # Optional: supply a custom CA bundle when the server uses a private CA
+  # tls:
+  #   caBundleSecretRef:
+  #     namespace: crossplane-system
+  #     name: rabbitmq-ca-bundle
+  #     key: ca.crt

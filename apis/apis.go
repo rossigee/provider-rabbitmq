@@ -1,0 +1,51 @@
+/*
+Copyright 2025 The Crossplane Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package apis contains Kubernetes API for the RabbitMQ provider.
+package apis
+
+import (
+	"k8s.io/apimachinery/pkg/runtime"
+
+	v1beta1 "github.com/rossigee/provider-rabbitmq/apis/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+)
+
+func init() {
+	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
+	AddToSchemes = append(AddToSchemes,
+		v1beta1.AddToScheme,
+		vhostv1beta1.AddToScheme,
+		exchangev1beta1.AddToScheme,
+		queuev1beta1.AddToScheme,
+		bindingv1beta1.AddToScheme,
+		userv1beta1.AddToScheme,
+		permissionv1beta1.AddToScheme,
+	)
+}
+
+// AddToSchemes may be used to add all resources defined in the project to a Scheme
+var AddToSchemes runtime.SchemeBuilder
+
+// AddToScheme adds all Resources to the Scheme
+func AddToScheme(s *runtime.Scheme) error {
+	return AddToSchemes.AddToScheme(s)
+}

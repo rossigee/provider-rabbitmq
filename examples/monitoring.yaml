@@ -1,0 +1,72 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: provider-rabbitmq-metrics
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: provider-rabbitmq
+    app.kubernetes.io/component: provider
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: provider-rabbitmq
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: provider-rabbitmq-metrics
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: provider-rabbitmq
+    app.kubernetes.io/component: provider
+spec:
+  selector:
+    app.kubernetes.io/name: provider-rabbitmq
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: provider-rabbitmq-alerts
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: provider-rabbitmq
+    app.kubernetes.io/component: provider
+spec:
+  groups:
+  - name: provider-rabbitmq.rules
+    rules:
+    - alert: ProviderRabbitMQHighErrorRate
+      expr: |
+        (
+          sum(rate(controller_runtime_reconcile_errors_total{controller=~"rabbitmq.*"}[5m])) /
+          sum(rate(controller_runtime_reconcile_total{controller=~"rabbitmq.*"}[5m]))
+        ) > 0.1
+      for: 2m
+      labels:
+        severity: warning
+        component: provider-rabbitmq
+      annotations:
+        summary: "High reconcile error rate in RabbitMQ provider"
+        description: "RabbitMQ provider reconcile error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+    - alert: ProviderRabbitMQDown
+      expr: up{job="provider-rabbitmq-metrics"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: provider-rabbitmq
+      annotations:
+        summary: "RabbitMQ provider is down"
+        description: "RabbitMQ provider metrics endpoint is not responding"

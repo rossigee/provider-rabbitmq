@@ -1,0 +1,21 @@
+apiVersion: v2
+name: provider-rabbitmq
+description: A Helm chart for Crossplane Provider RabbitMQ
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+home: https://github.com/rossigee/provider-rabbitmq
+sources:
+  - https://github.com/rossigee/provider-rabbitmq
+maintainers:
+  - name: Ross Golder
+    url: https://github.com/rossigee
+keywords:
+  - crossplane
+  - provider
+  - rabbitmq
+  - messaging
+  - cloud-native
+annotations:
+  crossplane.io/provider: "true"
+  crossplane.io/provider-group: "rabbitmq.crossplane.io"
