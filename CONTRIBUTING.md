@@ -159,24 +159,32 @@ Include:
 
 ```
 provider-rabbitmq/
-├── apis/                 # API definitions
-│   ├── domain/          # Domain resource API
-│   ├── mailinglist/     # MailingList resource API
-│   ├── route/           # Route resource API
-│   └── webhook/         # Webhook resource API
+├── apis/
+│   ├── v1beta1/              # ProviderConfig and ProviderConfigUsage
+│   ├── binding/v1beta1/
+│   ├── exchange/v1beta1/
+│   ├── permission/v1beta1/
+│   ├── queue/v1beta1/
+│   ├── user/v1beta1/
+│   └── vhost/v1beta1/
 ├── internal/
-│   ├── clients/         # RabbitMQ Management API client
-│   └── controller/      # Resource controllers
-├── package/             # Crossplane package configuration
-└── examples/            # Usage examples
+│   ├── clients/              # RabbitMQ Management API client
+│   └── controller/           # Resource controllers
+│       ├── binding/
+│       ├── exchange/
+│       ├── permission/
+│       ├── queue/
+│       ├── user/
+│       └── vhost/
+├── package/                  # Crossplane package configuration and CRDs
+└── examples/                 # Usage examples
 ```
 
 ### Key Components
 
-- **API Types**: Define Kubernetes resources (CRDs)
-- **Controllers**: Implement resource lifecycle management
-- **Clients**: Handle RabbitMQ Management API communication
-- **Webhooks**: Validation and defaulting logic
+- **API Types**: Define Kubernetes resources (CRDs) for each RabbitMQ resource
+- **Controllers**: Implement observe/create/update/delete lifecycle management
+- **Client**: Handles RabbitMQ Management HTTP API communication (`internal/clients/rabbitmq.go`)
 
 ### Crossplane Patterns
 
