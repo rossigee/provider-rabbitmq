@@ -21,6 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Package type metadata.
@@ -31,8 +32,8 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme        = SchemeBuilder.AddToScheme
+
+	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 )
 
 // Vhost type metadata.
@@ -43,7 +44,11 @@ var (
 	VhostGroupVersionKind = SchemeGroupVersion.WithKind(VhostKind)
 )
 
-func addKnownTypes(s *runtime.Scheme) error {
-	s.AddKnownTypes(SchemeGroupVersion, &Vhost{}, &VhostList{})
-	return nil
+func init() {
+	SchemeBuilder.Register(&Vhost{}, &VhostList{})
+}
+
+// AddToScheme adds all types of this group into the given scheme.
+func AddToScheme(s *runtime.Scheme) error {
+	return SchemeBuilder.AddToScheme(s)
 }

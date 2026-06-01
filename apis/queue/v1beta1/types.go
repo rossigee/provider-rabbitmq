@@ -43,6 +43,7 @@ type QueueParameters struct {
 	Exclusive bool `json:"exclusive,omitempty"`
 
 	// Arguments is a map of additional arguments for the queue
+	// Note: x-message-ttl should be passed as string (e.g., "3600000") for CRD compatibility
 	Arguments map[string]string `json:"arguments,omitempty"`
 
 	// MessageTTL sets the TTL for messages in the queue (in milliseconds)

@@ -32,13 +32,13 @@ import (
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes,
-		v1beta1.AddToScheme,
-		vhostv1beta1.AddToScheme,
-		exchangev1beta1.AddToScheme,
-		queuev1beta1.AddToScheme,
-		bindingv1beta1.AddToScheme,
-		userv1beta1.AddToScheme,
-		permissionv1beta1.AddToScheme,
+		v1beta1.SchemeBuilder.AddToScheme,
+		vhostv1beta1.SchemeBuilder.AddToScheme,
+		exchangev1beta1.SchemeBuilder.AddToScheme,
+		queuev1beta1.SchemeBuilder.AddToScheme,
+		bindingv1beta1.SchemeBuilder.AddToScheme,
+		userv1beta1.SchemeBuilder.AddToScheme,
+		permissionv1beta1.SchemeBuilder.AddToScheme,
 	)
 }
 

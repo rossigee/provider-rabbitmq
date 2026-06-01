@@ -112,6 +112,11 @@ func (in *UserParameters) DeepCopyInto(out *UserParameters) {
 		*out = new(v2.SecretKeySelector)
 		**out = **in
 	}
+	if in.ImportCredentialsSecret != nil {
+		in, out := &in.ImportCredentialsSecret, &out.ImportCredentialsSecret
+		*out = new(v2.SecretKeySelector)
+		**out = **in
+	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
 		*out = make([]string, len(*in))

@@ -64,8 +64,9 @@ spec:
                   arguments:
                     additionalProperties:
                       type: string
-                    description: Arguments is a map of additional arguments for the
-                      queue
+                    description: |-
+                      Arguments is a map of additional arguments for the queue
+                      Note: x-message-ttl should be passed as string (e.g., "3600000") for CRD compatibility
                     type: object
                   autoDelete:
                     description: AutoDelete deletes the queue when it has no consumers

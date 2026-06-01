@@ -33,6 +33,11 @@ type UserParameters struct {
 	// +optional
 	PasswordSecretRef *xpv1.SecretKeySelector `json:"passwordSecretRef,omitempty"`
 
+	// ImportCredentialsSecret references an existing secret containing
+	// username and password to import.
+	// +optional
+	ImportCredentialsSecret *xpv1.SecretKeySelector `json:"importCredentialsSecret,omitempty"`
+
 	// Tags are the RabbitMQ tags for the user (administrator, monitoring, policymaker, management)
 	// +kubebuilder:validation:Enum=administrator;monitoring;policymaker;management;impersonator
 	Tags []string `json:"tags,omitempty"`

@@ -22,7 +22,6 @@ import (
 	goruntime "runtime"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -79,15 +78,12 @@ func main() {
 	cfg, err := ctrl.GetConfig()
 	kingpin.FatalIfError(err, "Cannot get config")
 
-	scheme := kruntime.NewScheme()
-
 	cacheOpts := cache.Options{}
 	if ns != "" {
 		cacheOpts.DefaultNamespaces = map[string]cache.Config{ns: {}}
 	}
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme,
 		Cache:  cacheOpts,
 		Metrics: server.Options{
 			BindAddress: *metricsAddr,

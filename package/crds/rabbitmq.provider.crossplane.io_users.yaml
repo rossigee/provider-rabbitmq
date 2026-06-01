@@ -61,6 +61,25 @@ spec:
                 description: UserParameters define the desired state of a RabbitMQ
                   User
                 properties:
+                  importCredentialsSecret:
+                    description: |-
+                      ImportCredentialsSecret references an existing secret containing
+                      username and password to import.
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
                   name:
                     description: Name is the username
                     type: string

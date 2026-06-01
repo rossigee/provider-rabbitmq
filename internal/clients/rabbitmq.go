@@ -168,8 +168,14 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 		}
 	}
 
+	namespace := mg.GetNamespace()
+	if namespace == "" {
+		namespace = "default"
+	}
+
 	if err := kube.Get(ctx, types.NamespacedName{
 		Name:      pcName,
+		Namespace: namespace,
 	}, pc); err != nil {
 		return nil, errors.Wrap(err, "cannot get ProviderConfig")
 	}
@@ -180,7 +186,7 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 		return nil, errors.New("ProviderConfig credentials.secretRef is not set")
 	}
 
-	ns := "default"
+	ns := namespace
 	if credRef.Namespace != "" {
 		ns = credRef.Namespace
 	}
@@ -436,10 +442,11 @@ func (c *rabbitmqClient) GetUser(ctx context.Context, name string) (*userv1beta1
 	if err := json.Unmarshal(data, &u); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal user")
 	}
-	obs := &userv1beta1.UserObservation{Name: u.Name}
+	var tags []string
 	if u.Tags != "" {
-		obs.Tags = strings.Split(u.Tags, ",")
+		tags = strings.Split(u.Tags, ",")
 	}
+	obs := &userv1beta1.UserObservation{Name: u.Name, Tags: tags}
 	return obs, nil
 }
 

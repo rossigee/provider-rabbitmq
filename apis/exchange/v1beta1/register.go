@@ -21,6 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Package type metadata.
@@ -31,8 +32,8 @@ const (
 
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme        = SchemeBuilder.AddToScheme
+
+	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 )
 
 // Exchange type metadata.
@@ -43,7 +44,11 @@ var (
 	ExchangeGroupVersionKind = SchemeGroupVersion.WithKind(ExchangeKind)
 )
 
-func addKnownTypes(s *runtime.Scheme) error {
-	s.AddKnownTypes(SchemeGroupVersion, &Exchange{}, &ExchangeList{})
-	return nil
+func init() {
+	SchemeBuilder.Register(&Exchange{}, &ExchangeList{})
+}
+
+// AddToScheme adds all types of this group into the given scheme.
+func AddToScheme(s *runtime.Scheme) error {
+	return SchemeBuilder.AddToScheme(s)
 }
