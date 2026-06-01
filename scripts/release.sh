@@ -72,7 +72,7 @@ update_version() {
 
     # Files to update
     local files=(
-        "CLAUDE.md"
+        "AGENTS.md"
         "README.md"
         "package/crossplane.yaml"
         "examples/provider-config.yaml"
