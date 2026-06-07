@@ -1,29 +1,56 @@
 # Provider RabbitMQ
 
-A Crossplane v2 provider for managing RabbitMQ resources via the Management HTTP API.
-All resources are namespace-scoped for multi-tenancy.
+[![CI](https://img.shields.io/github/actions/workflow/status/rossigee/provider-rabbitmq/ci.yml?branch=master)][build]
+[![Version](https://img.shields.io/github/v/release/rossigee/provider-rabbitmq)][releases]
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## Supported Resources
+[build]: https://github.com/rossigee/provider-rabbitmq/actions/workflows/ci.yml
+[releases]: https://github.com/rossigee/provider-rabbitmq/releases
 
-| Kind | API Group | Description |
-|------|-----------|-------------|
-| `VHost` | `rabbitmq.crossplane.io/v1beta1` | Virtual host |
-| `Exchange` | `rabbitmq.crossplane.io/v1beta1` | Exchange declaration |
-| `Queue` | `rabbitmq.crossplane.io/v1beta1` | Queue declaration |
-| `Binding` | `rabbitmq.crossplane.io/v1beta1` | Exchange-to-queue binding |
-| `User` | `rabbitmq.crossplane.io/v1beta1` | User account |
-| `Permission` | `rabbitmq.crossplane.io/v1beta1` | Per-user, per-vhost ACL |
+A Crossplane v2 provider for managing RabbitMQ resources via the Management HTTP API. All resources are namespace-scoped for multi-tenancy.
 
-## Quick Start
+## Container Registry
 
-1. Create a credentials secret:
+- **Primary**: `ghcr.io/rossigee/provider-rabbitmq:v0.1.0`
+
+## Overview
+
+A Crossplane provider for managing RabbitMQ resources including virtual hosts, exchanges, queues, and user permissions.
+
+## Features
+
+- **VHost Management**: Virtual host lifecycle management
+- **Exchange Management**: Exchange declaration and configuration
+- **Queue Management**: Queue declaration and binding
+- **User Management**: User accounts with permissions
+- **Multi-tenancy**: Namespace-scoped resources for team isolation
+
+## Getting Started
+
+### Prerequisites
+
+- Kubernetes cluster with Crossplane installed
+- RabbitMQ instance with Management HTTP API enabled
+- RabbitMQ admin credentials
+
+### Installation
+
+```bash
+kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.1.0
+```
+
+### Configuration
+
+Create a secret with your RabbitMQ credentials:
+
 ```bash
 kubectl create secret generic rabbitmq-credentials \
   --from-literal=credentials='{"username":"admin","password":"secret"}' \
   -n crossplane-system
 ```
 
-2. Apply the ProviderConfig:
+Create the ProviderConfig:
+
 ```yaml
 apiVersion: rabbitmq.crossplane.io/v1beta1
 kind: ProviderConfig
@@ -34,52 +61,78 @@ spec:
   credentials:
     source: Secret
     secretRef:
-      namespace: crossplane-system
       name: rabbitmq-credentials
+      namespace: crossplane-system
       key: credentials
 ```
 
-3. Apply sample resources:
-```bash
-kubectl apply -f examples/sample-resources.yaml
-```
+## Usage
 
-## TLS
-
-TLS verification is always enforced. To use a private CA (e.g. managed by
-trust-manager), set `spec.tls.caBundleSecretRef` on the ProviderConfig:
+### Create a Virtual Host
 
 ```yaml
-spec:
-  tls:
-    caBundleSecretRef:
-      namespace: crossplane-system
-      name: rabbitmq-ca-bundle
-      key: ca.crt
-```
-
-## User Passwords
-
-User passwords are **never stored in the CR spec**. Reference a Secret instead:
-
-```yaml
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: VHost
+metadata:
+  name: my-vhost
+  namespace: production
 spec:
   forProvider:
-    name: app-user
-    passwordSecretRef:
-      namespace: default
-      name: app-user-password
-      key: password
+    name: /my-vhost
+  providerConfigRef:
+    name: default
 ```
+
+### Create an Exchange
+
+```yaml
+apiVersion: rabbitmq.crossplane.io/v1beta1
+kind: Exchange
+metadata:
+  name: my-exchange
+  namespace: production
+spec:
+  forProvider:
+    name: my-exchange
+    vhostRef:
+      name: my-vhost
+    type: direct
+    durable: true
+  providerConfigRef:
+    name: default
+```
+
+## Resource Types
+
+| Resource | API Version | Description |
+|----------|-------------|-------------|
+| VHost | `rabbitmq.crossplane.io/v1beta1` | Virtual host |
+| Exchange | `rabbitmq.crossplane.io/v1beta1` | Exchange declaration |
+| Queue | `rabbitmq.crossplane.io/v1beta1` | Queue declaration |
+| Binding | `rabbitmq.crossplane.io/v1beta1` | Exchange-to-queue binding |
+| User | `rabbitmq.crossplane.io/v1beta1` | User account |
+| Permission | `rabbitmq.crossplane.io/v1beta1` | Per-user, per-vhost ACL |
 
 ## Development
 
 ```bash
-go build ./...
-go test ./...
-make generate   # regenerate deepcopy and CRDs after API changes
+# Build the provider
+make build
+
+# Run tests
+make test
+
+# Lint code
+make lint
+
+# Generate CRDs
+make generate
 ```
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+provider-rabbitmq is under the Apache 2.0 license.
