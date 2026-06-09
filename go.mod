@@ -3,7 +3,7 @@ module github.com/rossigee/provider-rabbitmq
 go 1.26.4
 
 require (
-	github.com/crossplane/crossplane-runtime/v2 v2.4.0-rc.0
+	github.com/crossplane/crossplane-runtime/v2 v2.3.2
 	github.com/crossplane/crossplane-tools v0.0.0-20251017183449-dd4517244339
 	github.com/crossplane/crossplane/apis/v2 v2.3.1
 	github.com/pkg/errors v0.9.1
@@ -106,7 +106,6 @@ require (
 )
 
 replace (
-	github.com/crossplane/crossplane-runtime/v2 => github.com/rossigee/crossplane-runtime/v2 v2.4.0-rc.0.0.20260522024312-ccb404ad65f6
 	k8s.io/api => k8s.io/api v0.35.1
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.35.1
