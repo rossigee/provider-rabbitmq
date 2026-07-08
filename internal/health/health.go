@@ -17,8 +17,10 @@ limitations under the License.
 package health
 
 import (
+	"fmt"
 	"net/http"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,5 +37,14 @@ func (hc *HealthChecker) HealthzCheck(_ *http.Request) error {
 }
 
 func (hc *HealthChecker) ReadyzCheck(_ *http.Request) error {
+	if hc.k8s == nil {
+		return nil
+	}
+
+	// Verify Kubernetes API connectivity
+	_, err := hc.k8s.RESTMapper().RESTMappings(schema.GroupKind{Group: "", Kind: "Namespace"})
+	if err != nil {
+		return fmt.Errorf("kubernetes API not accessible: %w", err)
+	}
 	return nil
 }
