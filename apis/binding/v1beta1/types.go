@@ -51,24 +51,24 @@ type BindingParameters struct {
 
 // BindingObservation reflects the observed state of a RabbitMQ Binding
 type BindingObservation struct {
-	Source          string `json:"source,omitempty"`
-	Destination     string `json:"destination,omitempty"`
-	DestinationType string `json:"destinationType,omitempty"`
-	VHost           string `json:"vhost,omitempty"`
-	RoutingKey     string `json:"routingKey,omitempty"`
-	Arguments      map[string]string `json:"arguments,omitempty"`
+	Source          string            `json:"source,omitempty"`
+	Destination     string            `json:"destination,omitempty"`
+	DestinationType string            `json:"destinationType,omitempty"`
+	VHost           string            `json:"vhost,omitempty"`
+	RoutingKey      string            `json:"routingKey,omitempty"`
+	Arguments       map[string]string `json:"arguments,omitempty"`
 }
 
 // A BindingSpec defines the desired state of a Binding.
 type BindingSpec struct {
 	xpv1.ManagedResourceSpec `json:",inline"`
-	ForProvider             BindingParameters `json:"forProvider"`
+	ForProvider              BindingParameters `json:"forProvider"`
 }
 
 // A BindingStatus represents the observed state of a Binding.
 type BindingStatus struct {
 	xpv1.ConditionedStatus `json:",inline"`
-	AtProvider            BindingObservation `json:"atProvider,omitempty"`
+	AtProvider             BindingObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true

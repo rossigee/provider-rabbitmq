@@ -21,7 +21,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // Package type metadata.
@@ -33,7 +32,7 @@ const (
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
 
-	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 )
 
 // Binding type metadata.
@@ -44,11 +43,11 @@ var (
 	BindingGroupVersionKind = SchemeGroupVersion.WithKind(BindingKind)
 )
 
-func init() {
-	SchemeBuilder.Register(&Binding{}, &BindingList{})
+// AddToScheme adds all types of this group into the given scheme.
+func addKnownTypes(s *runtime.Scheme) error {
+	return nil
 }
 
-// AddToScheme adds all types of this group into the given scheme.
 func AddToScheme(s *runtime.Scheme) error {
 	return SchemeBuilder.AddToScheme(s)
 }

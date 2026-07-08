@@ -17,11 +17,9 @@ limitations under the License.
 package v1beta1
 
 import (
-	"reflect"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
+	"reflect"
 )
 
 // Package type metadata.
@@ -33,7 +31,7 @@ const (
 var (
 	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
 
-	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 )
 
 // Vhost type metadata.
@@ -44,11 +42,11 @@ var (
 	VhostGroupVersionKind = SchemeGroupVersion.WithKind(VhostKind)
 )
 
-func init() {
-	SchemeBuilder.Register(&Vhost{}, &VhostList{})
+// AddToScheme adds all types of this group into the given scheme.
+func addKnownTypes(s *runtime.Scheme) error {
+	return nil
 }
 
-// AddToScheme adds all types of this group into the given scheme.
 func AddToScheme(s *runtime.Scheme) error {
 	return SchemeBuilder.AddToScheme(s)
 }

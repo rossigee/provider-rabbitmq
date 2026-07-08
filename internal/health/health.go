@@ -18,9 +18,8 @@ package health
 
 import (
 	"fmt"
-	"net/http"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

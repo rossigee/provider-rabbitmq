@@ -17,9 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PermissionParameters define the desired state of a RabbitMQ Permission
@@ -44,23 +43,23 @@ type PermissionParameters struct {
 
 // PermissionObservation reflects the observed state of a RabbitMQ Permission
 type PermissionObservation struct {
-	User string `json:"user,omitempty"`
-	VHost string `json:"vhost,omitempty"`
+	User      string `json:"user,omitempty"`
+	VHost     string `json:"vhost,omitempty"`
 	Configure string `json:"configure,omitempty"`
-	Write string `json:"write,omitempty"`
-	Read string `json:"read,omitempty"`
+	Write     string `json:"write,omitempty"`
+	Read      string `json:"read,omitempty"`
 }
 
 // A PermissionSpec defines the desired state of a Permission.
 type PermissionSpec struct {
 	xpv1.ManagedResourceSpec `json:",inline"`
-	ForProvider             PermissionParameters `json:"forProvider"`
+	ForProvider              PermissionParameters `json:"forProvider"`
 }
 
 // A PermissionStatus represents the observed state of a Permission.
 type PermissionStatus struct {
 	xpv1.ConditionedStatus `json:",inline"`
-	AtProvider            PermissionObservation `json:"atProvider,omitempty"`
+	AtProvider             PermissionObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true

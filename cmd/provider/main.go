@@ -18,27 +18,24 @@ package main
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	goruntime "runtime"
-
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
-
 	"github.com/rossigee/provider-rabbitmq/apis"
 	"github.com/rossigee/provider-rabbitmq/internal/controller"
 	"github.com/rossigee/provider-rabbitmq/internal/features"
 	"github.com/rossigee/provider-rabbitmq/internal/health"
 	"github.com/rossigee/provider-rabbitmq/internal/tracing"
 	"github.com/rossigee/provider-rabbitmq/internal/version"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func main() {
@@ -53,7 +50,6 @@ func main() {
 		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Bool()
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
-
 
 	zl := zap.New(zap.UseDevMode(*debug))
 	log := logging.NewLogrLogger(zl.WithName("provider-rabbitmq"))
@@ -90,7 +86,7 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Cache:  cacheOpts,
+		Cache: cacheOpts,
 		Metrics: server.Options{
 			BindAddress: *metricsAddr,
 		},

@@ -17,16 +17,14 @@ limitations under the License.
 package controller
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
-
-	"github.com/rossigee/provider-rabbitmq/internal/controller/vhost"
-	"github.com/rossigee/provider-rabbitmq/internal/controller/exchange"
-	"github.com/rossigee/provider-rabbitmq/internal/controller/queue"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/binding"
-	"github.com/rossigee/provider-rabbitmq/internal/controller/user"
+	"github.com/rossigee/provider-rabbitmq/internal/controller/exchange"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/permission"
+	"github.com/rossigee/provider-rabbitmq/internal/controller/queue"
+	"github.com/rossigee/provider-rabbitmq/internal/controller/user"
+	"github.com/rossigee/provider-rabbitmq/internal/controller/vhost"
+	"sigs.k8s.io/controller-runtime"
 )
 
 // Setup creates all RabbitMQ controllers and adds them to the manager.

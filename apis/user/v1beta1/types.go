@@ -17,9 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // UserParameters define the desired state of a RabbitMQ User
@@ -45,20 +44,20 @@ type UserParameters struct {
 
 // UserObservation reflects the observed state of a RabbitMQ User
 type UserObservation struct {
-	Name string `json:"name,omitempty"`
+	Name string   `json:"name,omitempty"`
 	Tags []string `json:"tags,omitempty"`
 }
 
 // A UserSpec defines the desired state of a User.
 type UserSpec struct {
 	xpv1.ManagedResourceSpec `json:",inline"`
-	ForProvider             UserParameters `json:"forProvider"`
+	ForProvider              UserParameters `json:"forProvider"`
 }
 
 // A UserStatus represents the observed state of a User.
 type UserStatus struct {
 	xpv1.ConditionedStatus `json:",inline"`
-	AtProvider            UserObservation `json:"atProvider,omitempty"`
+	AtProvider             UserObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true

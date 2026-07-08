@@ -17,7 +17,7 @@ limitations under the License.
 package features
 
 import (
-	feature "github.com/crossplane/crossplane-runtime/v2/pkg/feature"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 )
 
 const EnableAlphaManagementPolicies feature.Flag = "EnableAlphaManagementPolicies"

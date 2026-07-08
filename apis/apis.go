@@ -18,15 +18,14 @@ limitations under the License.
 package apis
 
 import (
+	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	v1beta1 "github.com/rossigee/provider-rabbitmq/apis/v1beta1"
-	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
-	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
 )
 
 func init() {

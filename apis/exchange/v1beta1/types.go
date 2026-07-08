@@ -17,9 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ExchangeParameters define the desired state of a RabbitMQ Exchange
@@ -53,25 +52,25 @@ type ExchangeParameters struct {
 
 // ExchangeObservation reflects the observed state of a RabbitMQ Exchange
 type ExchangeObservation struct {
-	Name        string `json:"name,omitempty"`
-	VHost       string `json:"vhost,omitempty"`
-	Type        string `json:"type,omitempty"`
-	AutoDelete  bool   `json:"autoDelete,omitempty"`
-	Durable     bool   `json:"durable,omitempty"`
-	Internal    bool   `json:"internal,omitempty"`
-	Arguments   map[string]string `json:"arguments,omitempty"`
+	Name       string            `json:"name,omitempty"`
+	VHost      string            `json:"vhost,omitempty"`
+	Type       string            `json:"type,omitempty"`
+	AutoDelete bool              `json:"autoDelete,omitempty"`
+	Durable    bool              `json:"durable,omitempty"`
+	Internal   bool              `json:"internal,omitempty"`
+	Arguments  map[string]string `json:"arguments,omitempty"`
 }
 
 // A ExchangeSpec defines the desired state of a Exchange.
 type ExchangeSpec struct {
 	xpv1.ManagedResourceSpec `json:",inline"`
-	ForProvider             ExchangeParameters `json:"forProvider"`
+	ForProvider              ExchangeParameters `json:"forProvider"`
 }
 
 // A ExchangeStatus represents the observed state of a Exchange.
 type ExchangeStatus struct {
 	xpv1.ConditionedStatus `json:",inline"`
-	AtProvider            ExchangeObservation `json:"atProvider,omitempty"`
+	AtProvider             ExchangeObservation `json:"atProvider,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -2,25 +2,22 @@ package user
 
 import (
 	"context"
-	"testing"
-
+	"github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
+	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
-
-	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	permv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
-	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
-	clients "github.com/rossigee/provider-rabbitmq/internal/clients"
+	"testing"
 )
 
 // noopClient satisfies clients.Client with zero-value returns.
