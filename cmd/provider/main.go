@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -36,6 +37,7 @@ import (
 	"github.com/rossigee/provider-rabbitmq/internal/controller"
 	"github.com/rossigee/provider-rabbitmq/internal/features"
 	"github.com/rossigee/provider-rabbitmq/internal/health"
+	"github.com/rossigee/provider-rabbitmq/internal/tracing"
 	"github.com/rossigee/provider-rabbitmq/internal/version"
 )
 
@@ -52,8 +54,13 @@ func main() {
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
+	shutdownTracing(context.Background())
+
 	zl := zap.New(zap.UseDevMode(*debug))
 	log := logging.NewLogrLogger(zl.WithName("provider-rabbitmq"))
+
+	shutdownTracing := tracing.Init("provider-rabbitmq")
+	defer shutdownTracing(context.Background())
 
 	if *debug {
 		ctrl.SetLogger(zl)
