@@ -21,8 +21,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
-
+	"github.com/crossplane/crossplane/apis/v2/core/v2"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -110,12 +109,12 @@ func (in *UserParameters) DeepCopyInto(out *UserParameters) {
 	*out = *in
 	if in.PasswordSecretRef != nil {
 		in, out := &in.PasswordSecretRef, &out.PasswordSecretRef
-		*out = new(xpv1.SecretKeySelector)
+		*out = new(v2.SecretKeySelector)
 		**out = **in
 	}
 	if in.ImportCredentialsSecret != nil {
 		in, out := &in.ImportCredentialsSecret, &out.ImportCredentialsSecret
-		*out = new(xpv1.SecretKeySelector)
+		*out = new(v2.SecretKeySelector)
 		**out = **in
 	}
 	if in.Tags != nil {
