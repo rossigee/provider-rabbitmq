@@ -21,34 +21,34 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 )
 
-func (in *User) GetCondition(ct xpv2.ConditionType) xpv2.Condition {
+func (in *User) GetCondition(ct xpv1.ConditionType) xpv1.Condition {
 	return in.Status.GetCondition(ct)
 }
 
-func (in *User) SetConditions(c ...xpv2.Condition) {
+func (in *User) SetConditions(c ...xpv1.Condition) {
 	in.Status.SetConditions(c...)
 }
 
-func (in *User) GetManagementPolicies() xpv2.ManagementPolicies {
+func (in *User) GetManagementPolicies() xpv1.ManagementPolicies {
 	return in.Spec.ManagementPolicies
 }
 
-func (in *User) SetManagementPolicies(p xpv2.ManagementPolicies) {
+func (in *User) SetManagementPolicies(p xpv1.ManagementPolicies) {
 	in.Spec.ManagementPolicies = p
 }
 
-func (in *User) SetProviderConfigReference(r *xpv2.ProviderConfigReference) {
+func (in *User) SetProviderConfigReference(r *xpv1.ProviderConfigReference) {
 	in.Spec.ProviderConfigReference = r
 }
 
-func (in *User) GetWriteConnectionSecretToReference() *xpv2.LocalSecretReference {
+func (in *User) GetWriteConnectionSecretToReference() *xpv1.LocalSecretReference {
 	return in.Spec.WriteConnectionSecretToReference
 }
 
-func (in *User) SetWriteConnectionSecretToReference(r *xpv2.LocalSecretReference) {
+func (in *User) SetWriteConnectionSecretToReference(r *xpv1.LocalSecretReference) {
 	in.Spec.WriteConnectionSecretToReference = r
 }
 

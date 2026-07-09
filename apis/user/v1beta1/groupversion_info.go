@@ -14,18 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package v1beta1 contains the v1beta1 group rabbitmq.provider.crossplane.io resources of the provider.
+// +kubebuilder:object:generate=true
+// +groupName=rabbitmq.provider.crossplane.io
+// +versionName=v1beta1
 package v1beta1
 
 import (
-	"reflect"
-
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Permission type metadata.
-var (
-	PermissionKind             = reflect.TypeOf(Permission{}).Name()
-	PermissionGroupKind        = schema.GroupKind{Group: Group, Kind: PermissionKind}
-	PermissionKindAPIVersion   = PermissionKind + "." + SchemeGroupVersion.String()
-	PermissionGroupVersionKind = SchemeGroupVersion.WithKind(PermissionKind)
+const (
+	Group   = "rabbitmq.provider.crossplane.io"
+	Version = "v1beta1"
 )
+
+var (
+	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
+	AddToScheme        = SchemeBuilder.AddToScheme
+)
+
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(SchemeGroupVersion,
+		&User{},
+		&UserList{},
+	)
+	return nil
+}

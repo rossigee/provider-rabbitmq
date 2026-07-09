@@ -17,21 +17,9 @@ limitations under the License.
 package v1beta1
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
-)
 
-// Package type metadata.
-const (
-	Group   = "rabbitmq.provider.crossplane.io"
-	Version = "v1beta1"
-)
-
-var (
-	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // User type metadata.
@@ -41,12 +29,3 @@ var (
 	UserKindAPIVersion   = UserKind + "." + SchemeGroupVersion.String()
 	UserGroupVersionKind = SchemeGroupVersion.WithKind(UserKind)
 )
-
-// AddToScheme adds all types of this group into the given scheme.
-func addKnownTypes(s *runtime.Scheme) error {
-	return nil
-}
-
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
-}

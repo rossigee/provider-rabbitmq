@@ -18,7 +18,11 @@ package main
 
 import (
 	"context"
-	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"os"
+	"path/filepath"
+	"runtime"
+
+	xpcontroller "github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
@@ -29,10 +33,7 @@ import (
 	"github.com/rossigee/provider-rabbitmq/internal/tracing"
 	"github.com/rossigee/provider-rabbitmq/internal/version"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"os"
-	"path/filepath"
-	"runtime"
-	"sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -66,8 +67,8 @@ func main() {
 	log.Info("Provider starting up",
 		"provider", "provider-rabbitmq",
 		"version", version.Version,
-		"go-version", goruntime.Version(),
-		"platform", goruntime.GOOS+"/"+goruntime.GOARCH,
+		"go-version", runtime.Version(),
+		"platform", runtime.GOOS+"/"+runtime.GOARCH,
 		"poll-interval", pollInterval.String(),
 		"max-reconcile-rate", *maxReconcileRate,
 		"leader-election", *leaderElection,
@@ -79,6 +80,9 @@ func main() {
 
 	cfg, err := ctrl.GetConfig()
 	kingpin.FatalIfError(err, "Cannot get config")
+
+	// Use controller-runtime package alias for runtime objects
+	_ = ctrl.SetupSignalHandler
 
 	cacheOpts := cache.Options{}
 	if ns != "" {

@@ -21,7 +21,8 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -200,7 +201,7 @@ func (in *TLSConfig) DeepCopyInto(out *TLSConfig) {
 	*out = *in
 	if in.CABundleSecretRef != nil {
 		in, out := &in.CABundleSecretRef, &out.CABundleSecretRef
-		*out = new(v2.SecretKeySelector)
+		*out = new(xpv1.SecretKeySelector)
 		**out = **in
 	}
 }

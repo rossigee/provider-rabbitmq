@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/pkg/errors"
-	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,29 +54,29 @@ func (*noopClient) CreateUser(_ context.Context, _ *userv1beta1.UserParameters, 
 	return nil, nil
 }
 func (*noopClient) DeleteUser(_ context.Context, _ string) error { return nil }
-func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
+func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
-func (*noopClient) SetPermission(_ context.Context, _ *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
-	return &permv1beta1.PermissionObservation{}, nil
+func (*noopClient) SetPermission(_ context.Context, _ *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
+	return &permissionv1beta1.PermissionObservation{}, nil
 }
 func (*noopClient) DeletePermission(_ context.Context, _, _ string) error { return nil }
 
 // permStub overrides just the three permission methods.
 type permStub struct {
 	noopClient
-	getPermission    func(context.Context, string, string) (*permv1beta1.PermissionObservation, error)
-	setPermission    func(context.Context, *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error)
+	getPermission    func(context.Context, string, string) (*permissionv1beta1.PermissionObservation, error)
+	setPermission    func(context.Context, *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error)
 	deletePermission func(context.Context, string, string) error
 }
 
-func (s *permStub) GetPermission(ctx context.Context, user, vhost string) (*permv1beta1.PermissionObservation, error) {
+func (s *permStub) GetPermission(ctx context.Context, user, vhost string) (*permissionv1beta1.PermissionObservation, error) {
 	if s.getPermission != nil {
 		return s.getPermission(ctx, user, vhost)
 	}
 	return s.noopClient.GetPermission(ctx, user, vhost)
 }
-func (s *permStub) SetPermission(ctx context.Context, spec *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
+func (s *permStub) SetPermission(ctx context.Context, spec *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
 	if s.setPermission != nil {
 		return s.setPermission(ctx, spec)
 	}
@@ -95,10 +95,10 @@ var _ clients.Client = &permStub{}
 
 // --- helpers ---
 
-func newPermission(user, vhost, configure, write, read string) *permv1beta1.Permission {
-	return &permv1beta1.Permission{
-		Spec: permv1beta1.PermissionSpec{
-			ForProvider: permv1beta1.PermissionParameters{
+func newPermission(user, vhost, configure, write, read string) *permissionv1beta1.Permission {
+	return &permissionv1beta1.Permission{
+		Spec: permissionv1beta1.PermissionSpec{
+			ForProvider: permissionv1beta1.PermissionParameters{
 				User: user, VHost: vhost,
 				Configure: configure, Write: write, Read: read,
 			},
@@ -110,7 +110,7 @@ func newPermission(user, vhost, configure, write, read string) *permv1beta1.Perm
 
 func TestObserve_NotFound(t *testing.T) {
 	e := &external{service: &permStub{
-		getPermission: func(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
+		getPermission: func(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 			return nil, &clients.NotFoundError{Body: "not found"}
 		},
 	}}
@@ -121,8 +121,8 @@ func TestObserve_NotFound(t *testing.T) {
 
 func TestObserve_UpToDate(t *testing.T) {
 	e := &external{service: &permStub{
-		getPermission: func(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
-			return &permv1beta1.PermissionObservation{Configure: ".*", Write: ".*", Read: ".*"}, nil
+		getPermission: func(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
+			return &permissionv1beta1.PermissionObservation{Configure: ".*", Write: ".*", Read: ".*"}, nil
 		},
 	}}
 	obs, err := e.Observe(context.Background(), newPermission("alice", "/", ".*", ".*", ".*"))
@@ -133,8 +133,8 @@ func TestObserve_UpToDate(t *testing.T) {
 
 func TestObserve_ConfigureDrift(t *testing.T) {
 	e := &external{service: &permStub{
-		getPermission: func(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
-			return &permv1beta1.PermissionObservation{Configure: "old", Write: ".*", Read: ".*"}, nil
+		getPermission: func(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
+			return &permissionv1beta1.PermissionObservation{Configure: "old", Write: ".*", Read: ".*"}, nil
 		},
 	}}
 	obs, err := e.Observe(context.Background(), newPermission("alice", "/", "new", ".*", ".*"))
@@ -145,8 +145,8 @@ func TestObserve_ConfigureDrift(t *testing.T) {
 
 func TestObserve_ReadDrift(t *testing.T) {
 	e := &external{service: &permStub{
-		getPermission: func(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
-			return &permv1beta1.PermissionObservation{Configure: ".*", Write: ".*", Read: "logs.*"}, nil
+		getPermission: func(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
+			return &permissionv1beta1.PermissionObservation{Configure: ".*", Write: ".*", Read: "logs.*"}, nil
 		},
 	}}
 	obs, err := e.Observe(context.Background(), newPermission("alice", "/", ".*", ".*", ".*"))
@@ -156,7 +156,7 @@ func TestObserve_ReadDrift(t *testing.T) {
 
 func TestObserve_ErrorPropagated(t *testing.T) {
 	e := &external{service: &permStub{
-		getPermission: func(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
+		getPermission: func(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 			return nil, errors.New("connection refused")
 		},
 	}}
@@ -167,11 +167,11 @@ func TestObserve_ErrorPropagated(t *testing.T) {
 // --- Create ---
 
 func TestCreate_CallsSetPermission(t *testing.T) {
-	var gotSpec *permv1beta1.PermissionParameters
+	var gotSpec *permissionv1beta1.PermissionParameters
 	e := &external{service: &permStub{
-		setPermission: func(_ context.Context, spec *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
+		setPermission: func(_ context.Context, spec *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
 			gotSpec = spec
-			return &permv1beta1.PermissionObservation{User: spec.User, VHost: spec.VHost}, nil
+			return &permissionv1beta1.PermissionObservation{User: spec.User, VHost: spec.VHost}, nil
 		},
 	}}
 	cr := newPermission("alice", "/", ".*", ".*", ".*")
@@ -184,11 +184,11 @@ func TestCreate_CallsSetPermission(t *testing.T) {
 // --- Update ---
 
 func TestUpdate_CallsSetPermission(t *testing.T) {
-	var gotSpec *permv1beta1.PermissionParameters
+	var gotSpec *permissionv1beta1.PermissionParameters
 	e := &external{service: &permStub{
-		setPermission: func(_ context.Context, spec *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
+		setPermission: func(_ context.Context, spec *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
 			gotSpec = spec
-			return &permv1beta1.PermissionObservation{}, nil
+			return &permissionv1beta1.PermissionObservation{}, nil
 		},
 	}}
 	cr := newPermission("alice", "/", "newrule", ".*", ".*")

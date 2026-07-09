@@ -23,23 +23,23 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
-	"github.com/crossplane/crossplane/apis/v2/core/v2"
-	"github.com/pkg/errors"
-	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"io"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/url"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
+	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"github.com/pkg/errors"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	v1beta1 "github.com/rossigee/provider-rabbitmq/apis/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Config struct {
@@ -153,11 +153,11 @@ func (e *errClient) SetPermission(_ context.Context, _ *permissionv1beta1.Permis
 func (e *errClient) DeletePermission(_ context.Context, _, _ string) error { return e.err }
 
 func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*Config, error) {
-	pc := &pv1beta1.ProviderConfig{}
+	pc := &v1beta1.ProviderConfig{}
 
 	pcName := "default"
 	type typedPCReferencer interface {
-		GetProviderConfigReference() *xpv2.ProviderConfigReference
+		GetProviderConfigReference() *xpv1.ProviderConfigReference
 	}
 	if r, ok := mg.(typedPCReferencer); ok {
 		if ref := r.GetProviderConfigReference(); ref != nil && ref.Name != "" {
@@ -214,9 +214,9 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 	if pc.Spec.TLS != nil && pc.Spec.TLS.CABundleSecretRef != nil {
 		caData, err := resource.CommonCredentialExtractor(
 			ctx,
-			xpv2.CredentialsSourceSecret,
+			xpv1.CredentialsSourceSecret,
 			kube,
-			xpv2.CommonCredentialSelectors{SecretRef: pc.Spec.TLS.CABundleSecretRef},
+			xpv1.CommonCredentialSelectors{SecretRef: pc.Spec.TLS.CABundleSecretRef},
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot get TLS CA bundle")

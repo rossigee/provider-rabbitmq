@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -230,12 +230,12 @@ func TestGetPermission_Unmarshals(t *testing.T) {
 	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.Path decodes %2F; use RequestURI to check the raw encoded path.
 		assert.Equal(t, "/api/permissions/%2F/alice", r.RequestURI)
-		_, _ = w.Write([]byte(`{"user":"alice","vhost":"/","configure":".*","write":".*","read":"logs\\..*"}`))
+		_, _ = w.Write([]byte(`{"user":"alice","vhost":"/","configure":".*","write":".*","read":"logs..*"}`))
 	})
 	obs, err := c.GetPermission(context.Background(), "alice", "/")
 	require.NoError(t, err)
 	assert.Equal(t, "alice", obs.User)
 	assert.Equal(t, "/", obs.VHost)
 	assert.Equal(t, ".*", obs.Configure)
-	assert.Equal(t, `logs\..*`, obs.Read)
+	assert.Equal(t, `logs..*`, obs.Read)
 }

@@ -1,18 +1,19 @@
 package vhost
 
 import (
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
 	"context"
+	"testing"
+
 	"github.com/pkg/errors"
-	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // noopClient satisfies clients.Client with zero-value returns.
@@ -53,10 +54,10 @@ func (*noopClient) CreateUser(_ context.Context, _ *userv1beta1.UserParameters, 
 	return nil, nil
 }
 func (*noopClient) DeleteUser(_ context.Context, _ string) error { return nil }
-func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
+func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
-func (*noopClient) SetPermission(_ context.Context, _ *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
+func (*noopClient) SetPermission(_ context.Context, _ *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
 func (*noopClient) DeletePermission(_ context.Context, _, _ string) error { return nil }

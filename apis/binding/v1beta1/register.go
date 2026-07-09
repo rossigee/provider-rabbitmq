@@ -19,20 +19,7 @@ package v1beta1
 import (
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-)
-
-// Package type metadata.
-const (
-	Group   = "rabbitmq.provider.crossplane.io"
-	Version = "v1beta1"
-)
-
-var (
-	SchemeGroupVersion = schema.GroupVersion{Group: Group, Version: Version}
-
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 )
 
 // Binding type metadata.
@@ -42,12 +29,3 @@ var (
 	BindingKindAPIVersion   = BindingKind + "." + SchemeGroupVersion.String()
 	BindingGroupVersionKind = SchemeGroupVersion.WithKind(BindingKind)
 )
-
-// AddToScheme adds all types of this group into the given scheme.
-func addKnownTypes(s *runtime.Scheme) error {
-	return nil
-}
-
-func AddToScheme(s *runtime.Scheme) error {
-	return SchemeBuilder.AddToScheme(s)
-}

@@ -2,22 +2,23 @@ package user
 
 import (
 	"context"
-	"github.com/crossplane/crossplane/apis/v2/core/v2"
+	"testing"
+
+	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/pkg/errors"
-	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	"github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 // noopClient satisfies clients.Client with zero-value returns.
@@ -51,10 +52,10 @@ func (*noopClient) CreateBinding(_ context.Context, _ *bindingv1beta1.BindingPar
 	return nil, nil
 }
 func (*noopClient) DeleteBinding(_ context.Context, _, _, _, _ string) error { return nil }
-func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permv1beta1.PermissionObservation, error) {
+func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
-func (*noopClient) SetPermission(_ context.Context, _ *permv1beta1.PermissionParameters) (*permv1beta1.PermissionObservation, error) {
+func (*noopClient) SetPermission(_ context.Context, _ *permissionv1beta1.PermissionParameters) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
 func (*noopClient) DeletePermission(_ context.Context, _, _ string) error { return nil }
@@ -203,7 +204,7 @@ func TestCreate_NoPassword(t *testing.T) {
 // --- Create (with password secret) ---
 
 func TestCreate_WithPassword(t *testing.T) {
-	s := kruntime.NewScheme()
+	s := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(s))
 
 	secret := &corev1.Secret{

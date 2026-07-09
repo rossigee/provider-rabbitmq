@@ -17,15 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"net/http/httptest"
+	"testing"
+
 	"github.com/rossigee/provider-rabbitmq/internal/health"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"net/http/httptest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestHealthChecker(t *testing.T) {
