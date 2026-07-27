@@ -58,11 +58,8 @@ func main() {
 	shutdownTracing := tracing.Init("provider-rabbitmq")
 	defer shutdownTracing(context.Background())
 
-	if *debug {
-		ctrl.SetLogger(zl)
-	} else {
-		ctrl.SetLogger(zl.WithValues("source", "controller-runtime").V(1))
-	}
+	// Always set the controller-runtime logger to prevent logging errors
+	ctrl.SetLogger(zl)
 
 	log.Info("Provider starting up",
 		"provider", "provider-rabbitmq",

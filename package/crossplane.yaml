@@ -25,7 +25,7 @@ metadata:
       TLS verification is always enforced. A custom CA bundle can be
       supplied via spec.tls.caBundleSecretRef on the ProviderConfig.
 spec:
-  controller:
-    permissionRequests: []
+  permissionRequests: []
+  controller: {}
   crossplane:
     version: ">=v1.14.0"
