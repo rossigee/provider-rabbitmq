@@ -21,6 +21,7 @@ import (
 	"github.com/rossigee/provider-rabbitmq/internal/controller/binding"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/exchange"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/permission"
+	"github.com/rossigee/provider-rabbitmq/internal/controller/providerconfig"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/queue"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/user"
 	"github.com/rossigee/provider-rabbitmq/internal/controller/vhost"
@@ -29,6 +30,9 @@ import (
 
 // Setup creates all RabbitMQ controllers and adds them to the manager.
 func Setup(mgr ctrl.Manager, o xpcontroller.Options) error {
+	if err := providerconfig.Setup(mgr); err != nil {
+		return err
+	}
 	if err := vhost.Setup(mgr, o); err != nil {
 		return err
 	}
