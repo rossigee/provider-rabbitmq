@@ -38,8 +38,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 		resource.ManagedKind(v1beta1.PermissionGroupVersionKind),
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient(), newServiceFn: clients.NewClient}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
-		managed.WithPollInterval(o.PollInterval),
-		managed.WithRecorder(nil))
+		managed.WithPollInterval(o.PollInterval))
 	return ctrl.NewControllerManagedBy(mgr).Named(name).WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).For(&v1beta1.Permission{}).Complete(r)
 }

@@ -45,8 +45,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 			newServiceFn: clients.NewClient,
 		}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
-		managed.WithPollInterval(o.PollInterval),
-		managed.WithRecorder(nil))
+		managed.WithPollInterval(o.PollInterval))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
