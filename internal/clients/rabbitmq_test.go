@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // --- IsNotFound ---

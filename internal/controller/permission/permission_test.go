@@ -2,6 +2,8 @@ package permission
 
 import (
 	"context"
+	"testing"
+
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/pkg/errors"
 	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
@@ -13,7 +15,6 @@ import (
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // noopClient satisfies clients.Client with zero-value returns for all methods.
