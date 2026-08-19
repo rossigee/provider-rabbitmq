@@ -1,8 +1,8 @@
 package vhost
 
 import (
-	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
 	"context"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
 	"testing"
 
 	"github.com/pkg/errors"
