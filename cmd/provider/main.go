@@ -26,6 +26,13 @@ import (
 	"github.com/crossplane/crossplane-runtime/v2/pkg/feature"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/logging"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/ratelimiter"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/statemetrics"
+	bindingv1beta1 "github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	permissionv1beta1 "github.com/rossigee/provider-rabbitmq/apis/permission/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
+	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/apis"
 	"github.com/rossigee/provider-rabbitmq/internal/controller"
 	"github.com/rossigee/provider-rabbitmq/internal/features"
@@ -36,6 +43,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -46,9 +54,10 @@ func main() {
 		pollInterval             = app.Flag("poll", "Poll interval controls how often an individual resource should be checked for drift.").Default("1m").Duration()
 		leaderElection           = app.Flag("leader-election", "Use leader election for the controller manager.").Short('l').Default("false").OverrideDefaultFromEnvar("LEADER_ELECTION").Bool()
 		maxReconcileRate         = app.Flag("max-reconcile-rate", "The global maximum rate per second at which resources may be checked for drift from the desired state.").Default("100").Int()
-		metricsAddr              = app.Flag("metrics-addr", "The address the metrics endpoint binds to.").Default(":8080").String()
 		healthAddr               = app.Flag("health-addr", "The address the health endpoint binds to.").Default(":8081").String()
 		enableManagementPolicies = app.Flag("enable-management-policies", "Enable support for Management Policies.").Default("true").Bool()
+		pollStateMetricInterval  = app.Flag("poll-state-metric", "State metric recording interval").Default("5s").Duration()
+		metricsBindAddress       = app.Flag("metrics-bind-address", "The address the metrics endpoint binds to.").Default(":8080").String()
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -89,7 +98,7 @@ func main() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Cache: cacheOpts,
 		Metrics: server.Options{
-			BindAddress: *metricsAddr,
+			BindAddress: *metricsBindAddress,
 		},
 		LeaderElection:         *leaderElection,
 		LeaderElectionID:       "crossplane-provider-rabbitmq",
@@ -98,6 +107,14 @@ func main() {
 	kingpin.FatalIfError(err, "Cannot create controller manager")
 
 	kingpin.FatalIfError(apis.AddToScheme(mgr.GetScheme()), "Cannot add RabbitMQ APIs to scheme")
+
+	mrStateMetrics := statemetrics.NewMRStateMetrics()
+	metrics.Registry.MustRegister(mrStateMetrics)
+
+	mo := xpcontroller.MetricOptions{
+		PollStateMetricInterval: *pollStateMetricInterval,
+		MRStateMetrics:          mrStateMetrics,
+	}
 
 	featureFlags := &feature.Flags{}
 	if *enableManagementPolicies {
@@ -110,9 +127,18 @@ func main() {
 		PollInterval:            *pollInterval,
 		GlobalRateLimiter:       ratelimiter.NewGlobal(*maxReconcileRate),
 		Features:                featureFlags,
+		MetricOptions:           &mo,
 	}
 
 	kingpin.FatalIfError(controller.Setup(mgr, o), "Cannot setup RabbitMQ controllers")
+
+	// Register state metrics for managed resources
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &bindingv1beta1.BindingList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Binding")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &exchangev1beta1.ExchangeList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Exchange")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &permissionv1beta1.PermissionList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Permission")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &queuev1beta1.QueueList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Queue")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &userv1beta1.UserList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for User")
+	kingpin.FatalIfError(mgr.Add(statemetrics.NewMRStateRecorder(mgr.GetClient(), o.Logger, o.MetricOptions.MRStateMetrics, &vhostv1beta1.VhostList{}, o.MetricOptions.PollStateMetricInterval)), "Cannot register state metrics for Vhost")
 
 	healthChecker := health.NewHealthChecker(mgr.GetClient(), nil)
 	kingpin.FatalIfError(mgr.AddHealthzCheck("rabbitmq-provider", healthChecker.HealthzCheck), "Cannot add healthz check")
