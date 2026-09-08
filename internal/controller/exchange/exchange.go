@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
+	"github.com/rossigee/provider-rabbitmq/internal/features"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -36,11 +37,17 @@ const errNotExchange = "managed resource is not an Exchange custom resource"
 func Setup(mgr ctrl.Manager, o controller.Options) error {
 	name := managed.ControllerName(v1beta1.ExchangeKind)
 
-	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(v1beta1.ExchangeGroupVersionKind),
+	opts := []managed.ReconcilerOption{
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient(), newServiceFn: clients.NewClient}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
-		managed.WithPollInterval(o.PollInterval))
+		managed.WithPollInterval(o.PollInterval),
+	}
+	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
+		opts = append(opts, managed.WithManagementPolicies())
+	}
+	r := managed.NewReconciler(mgr,
+		resource.ManagedKind(v1beta1.ExchangeGroupVersionKind),
+		opts...)
 
 	return ctrl.NewControllerManagedBy(mgr).Named(name).WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).For(&v1beta1.Exchange{}).Complete(r)

@@ -31,17 +31,24 @@ import (
 
 	"github.com/rossigee/provider-rabbitmq/apis/binding/v1beta1"
 	clients "github.com/rossigee/provider-rabbitmq/internal/clients"
+	"github.com/rossigee/provider-rabbitmq/internal/features"
 )
 
 const errNotBinding = "managed resource is not a Binding custom resource"
 
 func Setup(mgr ctrl.Manager, o controller.Options) error {
 	name := managed.ControllerName(v1beta1.BindingKind)
-	r := managed.NewReconciler(mgr,
-		resource.ManagedKind(v1beta1.BindingGroupVersionKind),
+	opts := []managed.ReconcilerOption{
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient(), newServiceFn: clients.NewClient}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
-		managed.WithPollInterval(o.PollInterval))
+		managed.WithPollInterval(o.PollInterval),
+	}
+	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
+		opts = append(opts, managed.WithManagementPolicies())
+	}
+	r := managed.NewReconciler(mgr,
+		resource.ManagedKind(v1beta1.BindingGroupVersionKind),
+		opts...)
 	return ctrl.NewControllerManagedBy(mgr).Named(name).WithOptions(o.ForControllerRuntime()).
 		WithEventFilter(resource.DesiredStateChanged()).For(&v1beta1.Binding{}).Complete(r)
 }
