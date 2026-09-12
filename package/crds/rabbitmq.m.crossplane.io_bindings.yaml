@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.21.0
-  name: vhosts.rabbitmq.provider.crossplane.io
+  name: bindings.rabbitmq.m.crossplane.io
 spec:
-  group: rabbitmq.provider.crossplane.io
+  group: rabbitmq.m.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Vhost
-    listKind: VhostList
-    plural: vhosts
-    singular: vhost
+    kind: Binding
+    listKind: BindingList
+    plural: bindings
+    singular: binding
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,7 +34,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Vhost is a managed resource that represents a RabbitMQ Vhost.
+        description: A Binding is a namespaced managed resource that represents a
+          RabbitMQ Binding.
         properties:
           apiVersion:
             description: |-
@@ -54,26 +55,44 @@ spec:
           metadata:
             type: object
           spec:
-            description: A VhostSpec defines the desired state of a Vhost.
+            description: A BindingSpec defines the desired state of a Binding.
             properties:
               forProvider:
-                description: VhostParameters define the desired state of a RabbitMQ
-                  Vhost
+                description: BindingParameters define the desired state of a RabbitMQ
+                  Binding
                 properties:
-                  description:
-                    description: Description is an optional description for the vhost
-                    maxLength: 2000
-                    type: string
-                  name:
-                    description: Name is the name of the vhost to create
-                    type: string
-                  tags:
-                    description: Tags is an optional set of tags for the vhost
-                    items:
+                  arguments:
+                    additionalProperties:
                       type: string
-                    type: array
+                    description: Arguments is a map of additional arguments for the
+                      binding
+                    type: object
+                  destination:
+                    description: Destination is the destination queue or exchange
+                      name
+                    type: string
+                  destinationType:
+                    default: queue
+                    description: DestinationType is the type of destination (queue
+                      or exchange)
+                    enum:
+                    - queue
+                    - exchange
+                    type: string
+                  routingKey:
+                    description: RoutingKey is the routing key for the binding
+                    type: string
+                  source:
+                    description: Source is the source exchange name
+                    type: string
+                  vhost:
+                    description: VHost is the name of the virtual host
+                    type: string
                 required:
-                - name
+                - destination
+                - routingKey
+                - source
+                - vhost
                 type: object
               managementPolicies:
                 default:
@@ -134,26 +153,26 @@ spec:
             - forProvider
             type: object
           status:
-            description: A VhostStatus represents the observed state of a Vhost.
+            description: A BindingStatus represents the observed state of a Binding.
             properties:
               atProvider:
-                description: VhostObservation reflects the observed state of a RabbitMQ
-                  Vhost
+                description: BindingObservation reflects the observed state of a RabbitMQ
+                  Binding
                 properties:
-                  description:
-                    description: Description is the vhost description
-                    type: string
-                  name:
-                    description: Name is the vhost name
-                    type: string
-                  tags:
-                    description: Tags associated with the vhost
-                    items:
+                  arguments:
+                    additionalProperties:
                       type: string
-                    type: array
-                  tracerPort:
-                    description: TracerPort is the port used for tracing
-                    type: integer
+                    type: object
+                  destination:
+                    type: string
+                  destinationType:
+                    type: string
+                  routingKey:
+                    type: string
+                  source:
+                    type: string
+                  vhost:
+                    type: string
                 type: object
               conditions:
                 description: Conditions of the resource.

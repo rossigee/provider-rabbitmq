@@ -31,7 +31,7 @@ import (
 	"github.com/rossigee/provider-rabbitmq/apis/v1beta1"
 )
 
-const controllerName = "providerconfig.rabbitmq.crossplane.io"
+const controllerName = "providerconfig.rabbitmq.m.crossplane.io"
 
 // Setup registers the ProviderConfig controller.
 func Setup(mgr ctrl.Manager) error {

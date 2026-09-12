@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	Group   = "rabbitmq.crossplane.io"
+	Group   = "rabbitmq.m.crossplane.io"
 	Version = "v1beta1"
 )
 

@@ -4,18 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.21.0
-  name: queues.rabbitmq.provider.crossplane.io
+  name: exchanges.rabbitmq.m.crossplane.io
 spec:
-  group: rabbitmq.provider.crossplane.io
+  group: rabbitmq.m.crossplane.io
   names:
     categories:
     - crossplane
     - managed
     - rabbitmq
-    kind: Queue
-    listKind: QueueList
-    plural: queues
-    singular: queue
+    kind: Exchange
+    listKind: ExchangeList
+    plural: exchanges
+    singular: exchange
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -34,8 +34,8 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: A Queue is a namespaced managed resource that represents a RabbitMQ
-          Queue.
+        description: A Exchange is a namespaced managed resource that represents a
+          RabbitMQ Exchange.
         properties:
           apiVersion:
             description: |-
@@ -55,56 +55,46 @@ spec:
           metadata:
             type: object
           spec:
-            description: A QueueSpec defines the desired state of a Queue.
+            description: A ExchangeSpec defines the desired state of a Exchange.
             properties:
               forProvider:
-                description: QueueParameters define the desired state of a RabbitMQ
-                  Queue
+                description: ExchangeParameters define the desired state of a RabbitMQ
+                  Exchange
                 properties:
                   arguments:
                     additionalProperties:
                       type: string
-                    description: |-
-                      Arguments is a map of additional arguments for the queue
-                      Note: x-message-ttl should be passed as string (e.g., "3600000") for CRD compatibility
+                    description: Arguments is a map of additional arguments for the
+                      exchange
                     type: object
                   autoDelete:
-                    description: AutoDelete deletes the queue when it has no consumers
+                    description: AutoDelete deletes the exchange when it has no subscribers
                     type: boolean
                   durable:
                     default: true
                     description: Durable survives broker restart
                     type: boolean
-                  exclusive:
-                    description: Exclusive is only accessible to the connection that
-                      declared it
+                  internal:
+                    description: Internal is true if the exchange is internal (cannot
+                      be directly published to)
                     type: boolean
-                  expires:
-                    description: Expires sets the time (in milliseconds) after which
-                      a queue can be deleted if no consumers
-                    type: integer
-                  maxLength:
-                    description: MaxLength sets the maximum number of messages in
-                      the queue
-                    type: integer
-                  messageTTL:
-                    description: MessageTTL sets the TTL for messages in the queue
-                      (in milliseconds)
-                    type: integer
                   name:
-                    description: Name is the name of the queue
+                    description: Name is the name of the exchange
                     type: string
-                  overflowBehavior:
-                    description: OverflowBehavior sets the behavior when the queue
-                      reaches its max length
+                  type:
+                    default: topic
+                    description: Type is the exchange type
                     enum:
-                    - drop-head
-                    - reject-publish
-                    - reject-publish-dlx
+                    - direct
+                    - topic
+                    - fanout
+                    - headers
+                    - x-delayed-message
+                    - x-durable-delayed-message
                     type: string
                   vhost:
                     description: VHost is the name of the virtual host to create the
-                      queue in
+                      exchange in
                     type: string
                 required:
                 - name
@@ -169,11 +159,11 @@ spec:
             - forProvider
             type: object
           status:
-            description: A QueueStatus represents the observed state of a Queue.
+            description: A ExchangeStatus represents the observed state of a Exchange.
             properties:
               atProvider:
-                description: QueueObservation reflects the observed state of a RabbitMQ
-                  Queue
+                description: ExchangeObservation reflects the observed state of a
+                  RabbitMQ Exchange
                 properties:
                   arguments:
                     additionalProperties:
@@ -181,23 +171,13 @@ spec:
                     type: object
                   autoDelete:
                     type: boolean
-                  consumers:
-                    type: integer
                   durable:
                     type: boolean
-                  exclusive:
+                  internal:
                     type: boolean
-                  expires:
-                    type: integer
-                  maxLength:
-                    type: integer
-                  messageTTL:
-                    type: integer
-                  messages:
-                    type: integer
                   name:
                     type: string
-                  overflowBehavior:
+                  type:
                     type: string
                   vhost:
                     type: string

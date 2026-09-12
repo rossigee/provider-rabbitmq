@@ -52,7 +52,7 @@ kubectl create secret generic rabbitmq-credentials \
 Create the ProviderConfig:
 
 ```yaml
-apiVersion: rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: default
@@ -71,7 +71,7 @@ spec:
 ### Create a Virtual Host
 
 ```yaml
-apiVersion: rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: VHost
 metadata:
   name: my-vhost
@@ -86,7 +86,7 @@ spec:
 ### Create an Exchange
 
 ```yaml
-apiVersion: rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: my-exchange
@@ -106,12 +106,15 @@ spec:
 
 | Resource | API Version | Description |
 |----------|-------------|-------------|
-| VHost | `rabbitmq.crossplane.io/v1beta1` | Virtual host |
-| Exchange | `rabbitmq.crossplane.io/v1beta1` | Exchange declaration |
-| Queue | `rabbitmq.crossplane.io/v1beta1` | Queue declaration |
-| Binding | `rabbitmq.crossplane.io/v1beta1` | Exchange-to-queue binding |
-| User | `rabbitmq.crossplane.io/v1beta1` | User account |
-| Permission | `rabbitmq.crossplane.io/v1beta1` | Per-user, per-vhost ACL |
+| Vhost | `rabbitmq.m.crossplane.io/v1beta1` | Virtual host |
+| Exchange | `rabbitmq.m.crossplane.io/v1beta1` | Exchange declaration |
+| Queue | `rabbitmq.m.crossplane.io/v1beta1` | Queue declaration |
+| Binding | `rabbitmq.m.crossplane.io/v1beta1` | Exchange-to-queue binding |
+| User | `rabbitmq.m.crossplane.io/v1beta1` | User account |
+| Permission | `rabbitmq.m.crossplane.io/v1beta1` | Per-user, per-vhost ACL |
+| ProviderConfig | `rabbitmq.m.crossplane.io/v1beta1` | Provider credentials (cluster-scoped) |
+
+All resources are namespaced `v1beta1` for Crossplane v2 multi-tenancy. See [docs/index.md](docs/index.md) for the full reference and [API coverage gaps](docs/index.md#api-coverage-gaps).
 
 ## Development
 

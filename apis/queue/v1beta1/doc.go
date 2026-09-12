@@ -16,5 +16,5 @@ limitations under the License.
 
 // Package v1beta1 contains the v1beta1 API types for RabbitMQ Queue.
 // +kubebuilder:object:generate=true
-// +groupName=rabbitmq.provider.crossplane.io
+// +groupName=rabbitmq.m.crossplane.io
 package v1beta1
