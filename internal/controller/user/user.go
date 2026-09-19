@@ -18,8 +18,6 @@ package user
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
@@ -30,6 +28,8 @@ import (
 	"github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
 	"github.com/rossigee/provider-rabbitmq/internal/clients"
 	"github.com/rossigee/provider-rabbitmq/internal/features"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -87,25 +87,21 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get user")
 	}
-	// PasswordHash is tracked locally (RabbitMQ never returns the password); it
-	// records the hash of the last password applied so secret rotation can be
-	// detected. Preserve it across this observation refresh.
-	lastHash := cr.Status.AtProvider.PasswordHash
+	// PasswordSecretVersion tracks the resourceVersion of the referenced
+	// password Secret when the password was last applied. RabbitMQ never
+	// returns the password, so this lets Observe detect rotation without
+	// hashing the secret value. Preserve it across this status refresh.
+	lastVersion := cr.Status.AtProvider.PasswordSecretVersion
 	cr.Status.AtProvider = *user
-	cr.Status.AtProvider.PasswordHash = lastHash
+	cr.Status.AtProvider.PasswordSecretVersion = lastVersion
 
 	upToDate := equalStringSlices(cr.Spec.ForProvider.Tags, user.Tags)
-	if cr.Spec.ForProvider.PasswordSecretRef != nil {
-		data, err := resource.CommonCredentialExtractor(
-			ctx,
-			xpv1.CredentialsSourceSecret,
-			c.kube,
-			xpv1.CommonCredentialSelectors{SecretRef: cr.Spec.ForProvider.PasswordSecretRef},
-		)
+	if ref := cr.Spec.ForProvider.PasswordSecretRef; ref != nil {
+		version, err := c.secretVersion(ctx, ref)
 		if err != nil {
 			return managed.ExternalObservation{}, errors.Wrap(err, errResolvePassword)
 		}
-		upToDate = upToDate && lastHash != "" && lastHash == passwordHash(data)
+		upToDate = upToDate && lastVersion != "" && lastVersion == version
 	}
 	cr.SetConditions(xpv1.Available())
 	return managed.ExternalObservation{
@@ -121,17 +117,13 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	}
 
 	password := ""
-	if cr.Spec.ForProvider.PasswordSecretRef != nil {
-		data, err := resource.CommonCredentialExtractor(
-			ctx,
-			xpv1.CredentialsSourceSecret,
-			c.kube,
-			xpv1.CommonCredentialSelectors{SecretRef: cr.Spec.ForProvider.PasswordSecretRef},
-		)
+	version := ""
+	if ref := cr.Spec.ForProvider.PasswordSecretRef; ref != nil {
+		var err error
+		password, version, err = c.resolvePassword(ctx, ref)
 		if err != nil {
 			return managed.ExternalCreation{}, errors.Wrap(err, errResolvePassword)
 		}
-		password = string(data)
 	}
 
 	cr.SetConditions(xpv1.Creating())
@@ -139,9 +131,7 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, "failed to create user")
 	}
-	if password != "" {
-		user.PasswordHash = passwordHash([]byte(password))
-	}
+	user.PasswordSecretVersion = version
 	meta.SetExternalName(cr, cr.Spec.ForProvider.Name)
 	cr.Status.AtProvider = *user
 	cr.SetConditions(xpv1.Available())
@@ -154,32 +144,41 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalUpdate{}, errors.New(errNotUser)
 	}
 	password := ""
-	if cr.Spec.ForProvider.PasswordSecretRef != nil {
-		data, err := resource.CommonCredentialExtractor(
-			ctx,
-			xpv1.CredentialsSourceSecret,
-			c.kube,
-			xpv1.CommonCredentialSelectors{SecretRef: cr.Spec.ForProvider.PasswordSecretRef},
-		)
+	version := ""
+	if ref := cr.Spec.ForProvider.PasswordSecretRef; ref != nil {
+		var err error
+		password, version, err = c.resolvePassword(ctx, ref)
 		if err != nil {
 			return managed.ExternalUpdate{}, errors.Wrap(err, errResolvePassword)
 		}
-		password = string(data)
 	}
 	user, err := c.service.CreateUser(ctx, &cr.Spec.ForProvider, password)
 	if err != nil {
 		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update user")
 	}
-	if password != "" {
-		user.PasswordHash = passwordHash([]byte(password))
-	}
+	user.PasswordSecretVersion = version
 	cr.Status.AtProvider = *user
 	return managed.ExternalUpdate{}, nil
 }
 
-func passwordHash(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+// resolvePassword returns the password value and the resourceVersion of the
+// referenced Secret. The resourceVersion is used to detect rotation without
+// storing or hashing the password.
+func (c *external) resolvePassword(ctx context.Context, ref *xpv1.SecretKeySelector) (string, string, error) {
+	s := &corev1.Secret{}
+	if err := c.kube.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, s); err != nil {
+		return "", "", err
+	}
+	return string(s.Data[ref.Key]), s.ResourceVersion, nil
+}
+
+// secretVersion returns the current resourceVersion of the referenced Secret.
+func (c *external) secretVersion(ctx context.Context, ref *xpv1.SecretKeySelector) (string, error) {
+	s := &corev1.Secret{}
+	if err := c.kube.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, s); err != nil {
+		return "", err
+	}
+	return s.ResourceVersion, nil
 }
 
 func equalStringSlices(a, b []string) bool {
