@@ -83,9 +83,14 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get queue")
 	}
+	sp := cr.Spec.ForProvider
+	upToDate := sp.Durable == queue.Durable &&
+		sp.AutoDelete == queue.AutoDelete &&
+		sp.Exclusive == queue.Exclusive &&
+		clients.ArgsMapsEqual(clients.QueueArgumentsJSON(&sp), queue.Arguments)
 	cr.Status.AtProvider = *queue
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -105,6 +110,15 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Queue)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotQueue)
+	}
+	queue, err := c.service.CreateQueue(ctx, &cr.Spec.ForProvider)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update queue")
+	}
+	cr.Status.AtProvider = *queue
 	return managed.ExternalUpdate{}, nil
 }
 

@@ -87,9 +87,6 @@ func main() {
 	cfg, err := ctrl.GetConfig()
 	kingpin.FatalIfError(err, "Cannot get config")
 
-	// Use controller-runtime package alias for runtime objects
-	_ = ctrl.SetupSignalHandler
-
 	cacheOpts := cache.Options{}
 	if ns != "" {
 		cacheOpts.DefaultNamespaces = map[string]cache.Config{ns: {}}

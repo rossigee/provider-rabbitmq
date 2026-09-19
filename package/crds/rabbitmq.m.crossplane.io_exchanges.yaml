@@ -63,7 +63,7 @@ spec:
                 properties:
                   arguments:
                     additionalProperties:
-                      type: string
+                      x-kubernetes-preserve-unknown-fields: true
                     description: Arguments is a map of additional arguments for the
                       exchange
                     type: object
@@ -167,7 +167,7 @@ spec:
                 properties:
                   arguments:
                     additionalProperties:
-                      type: string
+                      x-kubernetes-preserve-unknown-fields: true
                     type: object
                   autoDelete:
                     type: boolean

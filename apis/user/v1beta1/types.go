@@ -46,6 +46,9 @@ type UserParameters struct {
 type UserObservation struct {
 	Name string   `json:"name,omitempty"`
 	Tags []string `json:"tags,omitempty"`
+	// PasswordHash is the SHA-256 hex digest of the password last applied to
+	// RabbitMQ. It is used to detect password rotation in the referenced secret.
+	PasswordHash string `json:"passwordHash,omitempty"`
 }
 
 // A UserSpec defines the desired state of a User.

@@ -15,7 +15,7 @@ RabbitMQ Management HTTP API. All managed resources are namespace-scoped.
 - `User` — user account (password via `PasswordSecretRef`, never in spec)
 - `Permission` — per-user, per-vhost ACL
 
-**API group**: `rabbitmq.crossplane.io`
+**API group**: `rabbitmq.m.crossplane.io`
 
 ## Directory Structure
 

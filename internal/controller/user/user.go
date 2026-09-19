@@ -18,6 +18,8 @@ package user
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
@@ -85,11 +87,30 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get user")
 	}
+	// PasswordHash is tracked locally (RabbitMQ never returns the password); it
+	// records the hash of the last password applied so secret rotation can be
+	// detected. Preserve it across this observation refresh.
+	lastHash := cr.Status.AtProvider.PasswordHash
 	cr.Status.AtProvider = *user
+	cr.Status.AtProvider.PasswordHash = lastHash
+
+	upToDate := equalStringSlices(cr.Spec.ForProvider.Tags, user.Tags)
+	if cr.Spec.ForProvider.PasswordSecretRef != nil {
+		data, err := resource.CommonCredentialExtractor(
+			ctx,
+			xpv1.CredentialsSourceSecret,
+			c.kube,
+			xpv1.CommonCredentialSelectors{SecretRef: cr.Spec.ForProvider.PasswordSecretRef},
+		)
+		if err != nil {
+			return managed.ExternalObservation{}, errors.Wrap(err, errResolvePassword)
+		}
+		upToDate = upToDate && lastHash != "" && lastHash == passwordHash(data)
+	}
 	cr.SetConditions(xpv1.Available())
 	return managed.ExternalObservation{
 		ResourceExists:   true,
-		ResourceUpToDate: equalStringSlices(cr.Spec.ForProvider.Tags, user.Tags),
+		ResourceUpToDate: upToDate,
 	}, nil
 }
 
@@ -118,6 +139,9 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 	if err != nil {
 		return managed.ExternalCreation{}, errors.Wrap(err, "failed to create user")
 	}
+	if password != "" {
+		user.PasswordHash = passwordHash([]byte(password))
+	}
 	meta.SetExternalName(cr, cr.Spec.ForProvider.Name)
 	cr.Status.AtProvider = *user
 	cr.SetConditions(xpv1.Available())
@@ -142,8 +166,20 @@ func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.Ext
 		}
 		password = string(data)
 	}
-	_, err := c.service.CreateUser(ctx, &cr.Spec.ForProvider, password)
-	return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update user")
+	user, err := c.service.CreateUser(ctx, &cr.Spec.ForProvider, password)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update user")
+	}
+	if password != "" {
+		user.PasswordHash = passwordHash([]byte(password))
+	}
+	cr.Status.AtProvider = *user
+	return managed.ExternalUpdate{}, nil
+}
+
+func passwordHash(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 func equalStringSlices(a, b []string) bool {

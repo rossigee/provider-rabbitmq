@@ -76,16 +76,23 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, errors.New(errNotBinding)
 	}
 	sp := cr.Spec.ForProvider
-	binding, err := c.service.GetBinding(ctx, sp.Source, sp.Destination, sp.VHost, sp.RoutingKey)
+	binding, err := c.service.GetBinding(ctx, sp.Source, sp.Destination, sp.VHost, sp.RoutingKey, sp.DestinationType)
 	if err != nil {
 		if clients.IsNotFound(err) {
 			return managed.ExternalObservation{ResourceExists: false}, nil
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get binding")
 	}
+	destType := sp.DestinationType
+	if destType == "" {
+		destType = "queue"
+	}
+	upToDate := binding.RoutingKey == sp.RoutingKey &&
+		binding.DestinationType == destType &&
+		clients.ArgsMapsEqual(binding.Arguments, sp.Arguments)
 	cr.Status.AtProvider = *binding
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -105,6 +112,23 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Binding)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotBinding)
+	}
+	// RabbitMQ has no in-place binding update; drift (routing key, destination
+	// type or arguments) is reconciled by deleting and recreating the binding.
+	sp := cr.Spec.ForProvider
+	err := c.service.DeleteBinding(ctx, sp.Source, sp.Destination, sp.VHost, sp.RoutingKey, sp.DestinationType)
+	if err != nil && !clients.IsNotFound(err) {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to delete binding during update")
+	}
+	binding, err := c.service.CreateBinding(ctx, &sp)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to create binding during update")
+	}
+	meta.SetExternalName(cr, sp.Source+"/"+sp.Destination)
+	cr.Status.AtProvider = *binding
 	return managed.ExternalUpdate{}, nil
 }
 
@@ -114,7 +138,7 @@ func (c *external) Delete(ctx context.Context, mg resource.Managed) (managed.Ext
 		return managed.ExternalDelete{}, errors.New(errNotBinding)
 	}
 	cr.SetConditions(xpv1.Deleting())
-	err := c.service.DeleteBinding(ctx, cr.Spec.ForProvider.Source, cr.Spec.ForProvider.Destination, cr.Spec.ForProvider.VHost, cr.Spec.ForProvider.RoutingKey)
+	err := c.service.DeleteBinding(ctx, cr.Spec.ForProvider.Source, cr.Spec.ForProvider.Destination, cr.Spec.ForProvider.VHost, cr.Spec.ForProvider.RoutingKey, cr.Spec.ForProvider.DestinationType)
 	if err != nil && !clients.IsNotFound(err) {
 		return managed.ExternalDelete{}, errors.Wrap(err, "failed to delete binding")
 	}
