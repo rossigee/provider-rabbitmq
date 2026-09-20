@@ -184,10 +184,11 @@ spec:
                 properties:
                   name:
                     type: string
-                  passwordHash:
+                  passwordSecretVersion:
                     description: |-
-                      PasswordHash is the SHA-256 hex digest of the password last applied to
-                      RabbitMQ. It is used to detect password rotation in the referenced secret.
+                      PasswordSecretVersion is the resourceVersion of the referenced password
+                      Secret at the time the password was last applied to RabbitMQ. It is used
+                      to detect password rotation without hashing the secret value.
                     type: string
                   tags:
                     items:
