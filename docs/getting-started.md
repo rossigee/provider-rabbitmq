@@ -88,7 +88,7 @@ kubectl create secret generic rabbitmq-creds \
 Apply the ProviderConfig to connect to RabbitMQ:
 
 ```yaml
-apiVersion: rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: default
@@ -120,7 +120,7 @@ kubectl describe providerconfig default
 Virtual hosts provide logical separation in RabbitMQ:
 
 ```yaml
-apiVersion: vhost.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Vhost
 metadata:
   name: demo-vhost
@@ -153,7 +153,7 @@ kubectl get vhost demo-vhost -o jsonpath='{.status.conditions}'
 ### Create an Exchange
 
 ```yaml
-apiVersion: exchange.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: demo-exchange
@@ -176,7 +176,7 @@ spec:
 ### Create a Queue
 
 ```yaml
-apiVersion: queue.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Queue
 metadata:
   name: demo-queue
@@ -200,7 +200,7 @@ spec:
 Bind a queue to an exchange:
 
 ```yaml
-apiVersion: binding.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Binding
 metadata:
   name: demo-binding
@@ -222,7 +222,7 @@ spec:
 ### Create a User
 
 ```yaml
-apiVersion: user.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: User
 metadata:
   name: demo-user
@@ -247,7 +247,7 @@ Create a full messaging setup:
 ```yaml
 ---
 # Virtual Host
-apiVersion: vhost.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Vhost
 metadata:
   name: messaging
@@ -260,7 +260,7 @@ spec:
     description: "Production messaging virtual host"
 ---
 # Exchange for topic routing
-apiVersion: exchange.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: topics
@@ -275,7 +275,7 @@ spec:
     durable: true
 ---
 # Queue for events
-apiVersion: queue.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Queue
 metadata:
   name: events
@@ -289,7 +289,7 @@ spec:
     durable: true
 ---
 # Bind queue to exchange
-apiVersion: binding.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Binding
 metadata:
   name: events-binding
@@ -305,7 +305,7 @@ spec:
     routingKey: "events.*"
 ---
 # Application user
-apiVersion: user.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: User
 metadata:
   name: app-user

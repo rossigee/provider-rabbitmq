@@ -21,6 +21,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -88,9 +89,9 @@ func (in *BindingObservation) DeepCopyInto(out *BindingObservation) {
 	*out = *in
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		*out = make(map[string]string, len(*in))
+		*out = make(map[string]v1.JSON, len(*in))
 		for key, val := range *in {
-			(*out)[key] = val
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }
@@ -110,9 +111,9 @@ func (in *BindingParameters) DeepCopyInto(out *BindingParameters) {
 	*out = *in
 	if in.Arguments != nil {
 		in, out := &in.Arguments, &out.Arguments
-		*out = make(map[string]string, len(*in))
+		*out = make(map[string]v1.JSON, len(*in))
 		for key, val := range *in {
-			(*out)[key] = val
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }

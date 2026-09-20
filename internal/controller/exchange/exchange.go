@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
@@ -40,6 +41,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	opts := []managed.ReconcilerOption{
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient(), newServiceFn: clients.NewClient}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(name))),
 		managed.WithPollInterval(o.PollInterval),
 	}
 	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
@@ -85,9 +87,15 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get exchange")
 	}
+	sp := cr.Spec.ForProvider
+	upToDate := sp.Type == exchange.Type &&
+		sp.Durable == exchange.Durable &&
+		sp.AutoDelete == exchange.AutoDelete &&
+		sp.Internal == exchange.Internal &&
+		clients.ArgsMapsEqual(sp.Arguments, exchange.Arguments)
 	cr.Status.AtProvider = *exchange
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -107,6 +115,18 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Exchange)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotExchange)
+	}
+	// Re-declaring an exchange is only idempotent when its type and durability
+	// are unchanged; RabbitMQ rejects changes to those with a precondition
+	// failure, which is surfaced to the user as a reconcile error.
+	exchange, err := c.service.CreateExchange(ctx, &cr.Spec.ForProvider)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update exchange")
+	}
+	cr.Status.AtProvider = *exchange
 	return managed.ExternalUpdate{}, nil
 }
 

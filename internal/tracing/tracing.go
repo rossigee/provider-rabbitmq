@@ -40,6 +40,12 @@ func Init(serviceName string) func(context.Context) {
 		samplingRatio = v
 	}
 
+	// By default the exporter uses an insecure gRPC connection for backwards
+	// compatibility. Set OTEL_EXPORTER_OTLP_INSECURE=false to authenticate the
+	// collector with TLS (and, if needed, provide a CA via OTEL_CA_CERT or the
+	// standard OTLP certificate environment variables).
+	insecure, _ := strconv.ParseBool(getEnv("OTEL_EXPORTER_OTLP_INSECURE", "true"))
+
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -52,11 +58,12 @@ func Init(serviceName string) func(context.Context) {
 		return func(context.Context) {}
 	}
 
+	clientOpts := []otlptracegrpc.Option{otlptracegrpc.WithEndpoint(endpoint)}
+	if insecure {
+		clientOpts = append(clientOpts, otlptracegrpc.WithInsecure())
+	}
 	exporter, err := otlptrace.New(ctx,
-		otlptracegrpc.NewClient(
-			otlptracegrpc.WithEndpoint(endpoint),
-			otlptracegrpc.WithInsecure(),
-		),
+		otlptracegrpc.NewClient(clientOpts...),
 	)
 	if err != nil {
 		return func(context.Context) {}

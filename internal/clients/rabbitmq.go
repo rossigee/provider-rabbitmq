@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
@@ -39,9 +40,15 @@ import (
 	v1beta1 "github.com/rossigee/provider-rabbitmq/apis/v1beta1"
 	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// httpTimeout bounds a single Management API request. The reconcile context
+// may have no deadline, so this prevents a hung connection (e.g. a blackholed
+// endpoint) from wedging a reconcile worker indefinitely.
+const httpTimeout = 30 * time.Second
 
 type Config struct {
 	Endpoint string
@@ -65,9 +72,9 @@ type Client interface {
 	CreateQueue(ctx context.Context, spec *queuev1beta1.QueueParameters) (*queuev1beta1.QueueObservation, error)
 	DeleteQueue(ctx context.Context, name, vhost string) error
 
-	GetBinding(ctx context.Context, source, destination, vhost, routingKey string) (*bindingv1beta1.BindingObservation, error)
+	GetBinding(ctx context.Context, source, destination, vhost, routingKey, destinationType string) (*bindingv1beta1.BindingObservation, error)
 	CreateBinding(ctx context.Context, spec *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error)
-	DeleteBinding(ctx context.Context, source, destination, vhost, routingKey string) error
+	DeleteBinding(ctx context.Context, source, destination, vhost, routingKey, destinationType string) error
 
 	GetUser(ctx context.Context, name string) (*userv1beta1.UserObservation, error)
 	CreateUser(ctx context.Context, spec *userv1beta1.UserParameters, password string) (*userv1beta1.UserObservation, error)
@@ -101,6 +108,7 @@ func NewClient(config *Config) Client {
 		username: config.Username,
 		password: config.Password,
 		client: &http.Client{
+			Timeout:   httpTimeout,
 			Transport: &http.Transport{TLSClientConfig: tlsCfg},
 		},
 	}
@@ -131,13 +139,13 @@ func (e *errClient) CreateQueue(_ context.Context, _ *queuev1beta1.QueueParamete
 	return nil, e.err
 }
 func (e *errClient) DeleteQueue(_ context.Context, _, _ string) error { return e.err }
-func (e *errClient) GetBinding(_ context.Context, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
+func (e *errClient) GetBinding(_ context.Context, _, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
 	return nil, e.err
 }
 func (e *errClient) CreateBinding(_ context.Context, _ *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error) {
 	return nil, e.err
 }
-func (e *errClient) DeleteBinding(_ context.Context, _, _, _, _ string) error { return e.err }
+func (e *errClient) DeleteBinding(_ context.Context, _, _, _, _, _ string) error { return e.err }
 func (e *errClient) GetUser(_ context.Context, _ string) (*userv1beta1.UserObservation, error) {
 	return nil, e.err
 }
@@ -176,6 +184,13 @@ func GetConfig(ctx context.Context, kube client.Client, mg resource.Managed) (*C
 		Namespace: namespace,
 	}, pc); err != nil {
 		return nil, errors.Wrap(err, "cannot get ProviderConfig")
+	}
+
+	// The Source field is optional in the CRD, so an empty value is treated as
+	// Secret for backwards compatibility.
+	source := pc.Spec.Credentials.Source
+	if source != "" && source != xpv1.CredentialsSourceSecret {
+		return nil, errors.Errorf("unsupported ProviderConfig credentials source %q: only %q is implemented", source, xpv1.CredentialsSourceSecret)
 	}
 
 	credSecret := &corev1.Secret{}
@@ -300,20 +315,54 @@ func (c *rabbitmqClient) request(ctx context.Context, method, path string, body 
 
 func (c *rabbitmqClient) GetVhost(ctx context.Context, name string) (*vhostv1beta1.VhostObservation, error) {
 	path := fmt.Sprintf("/api/vhosts/%s", url.PathEscape(name))
-	_, err := c.request(ctx, "GET", path, nil)
+	data, err := c.request(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &vhostv1beta1.VhostObservation{Name: name}, nil
+	var v struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Tags        string `json:"tags"`
+		TracerPort  int    `json:"tracer_port"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal vhost")
+	}
+	return &vhostv1beta1.VhostObservation{
+		Name:        v.Name,
+		Description: v.Description,
+		Tags:        splitTags(v.Tags),
+		TracerPort:  v.TracerPort,
+	}, nil
 }
 
 func (c *rabbitmqClient) CreateVhost(ctx context.Context, spec *vhostv1beta1.VhostParameters) (*vhostv1beta1.VhostObservation, error) {
 	path := fmt.Sprintf("/api/vhosts/%s", url.PathEscape(spec.Name))
-	_, err := c.request(ctx, "PUT", path, nil)
+	body := map[string]interface{}{}
+	if spec.Description != "" {
+		body["description"] = spec.Description
+	}
+	if len(spec.Tags) > 0 {
+		body["tags"] = strings.Join(spec.Tags, ",")
+	}
+	_, err := c.request(ctx, "PUT", path, body)
 	if err != nil {
 		return nil, err
 	}
-	return &vhostv1beta1.VhostObservation{Name: spec.Name}, nil
+	return &vhostv1beta1.VhostObservation{
+		Name:        spec.Name,
+		Description: spec.Description,
+		Tags:        spec.Tags,
+	}, nil
+}
+
+// splitTags splits a RabbitMQ CSV tag string into a slice. An empty string
+// yields nil.
+func splitTags(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ",")
 }
 
 func (c *rabbitmqClient) DeleteVhost(ctx context.Context, name string) error {
@@ -324,23 +373,57 @@ func (c *rabbitmqClient) DeleteVhost(ctx context.Context, name string) error {
 
 func (c *rabbitmqClient) GetExchange(ctx context.Context, name, vhost string) (*exchangev1beta1.ExchangeObservation, error) {
 	path := fmt.Sprintf("/api/exchanges/%s/%s", url.PathEscape(vhost), url.PathEscape(name))
-	_, err := c.request(ctx, "GET", path, nil)
+	data, err := c.request(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &exchangev1beta1.ExchangeObservation{Name: name, VHost: vhost}, nil
+	var e struct {
+		Name       string                          `json:"name"`
+		VHost      string                          `json:"vhost"`
+		Type       string                          `json:"type"`
+		AutoDelete bool                            `json:"auto_delete"`
+		Durable    bool                            `json:"durable"`
+		Internal   bool                            `json:"internal"`
+		Arguments  map[string]apiextensionsv1.JSON `json:"arguments"`
+	}
+	if err := json.Unmarshal(data, &e); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal exchange")
+	}
+	return &exchangev1beta1.ExchangeObservation{
+		Name:       e.Name,
+		VHost:      e.VHost,
+		Type:       e.Type,
+		AutoDelete: e.AutoDelete,
+		Durable:    e.Durable,
+		Internal:   e.Internal,
+		Arguments:  e.Arguments,
+	}, nil
 }
 
 func (c *rabbitmqClient) CreateExchange(ctx context.Context, spec *exchangev1beta1.ExchangeParameters) (*exchangev1beta1.ExchangeObservation, error) {
 	path := fmt.Sprintf("/api/exchanges/%s/%s", url.PathEscape(spec.VHost), url.PathEscape(spec.Name))
 	body := map[string]interface{}{
-		"type": spec.Type,
+		"type":        spec.Type,
+		"durable":     spec.Durable,
+		"auto_delete": spec.AutoDelete,
+		"internal":    spec.Internal,
+	}
+	if len(spec.Arguments) > 0 {
+		body["arguments"] = jsonArgsToInterface(spec.Arguments)
 	}
 	_, err := c.request(ctx, "PUT", path, body)
 	if err != nil {
 		return nil, err
 	}
-	return &exchangev1beta1.ExchangeObservation{Name: spec.Name, VHost: spec.VHost}, nil
+	return &exchangev1beta1.ExchangeObservation{
+		Name:       spec.Name,
+		VHost:      spec.VHost,
+		Type:       spec.Type,
+		AutoDelete: spec.AutoDelete,
+		Durable:    spec.Durable,
+		Internal:   spec.Internal,
+		Arguments:  spec.Arguments,
+	}, nil
 }
 
 func (c *rabbitmqClient) DeleteExchange(ctx context.Context, name, vhost string) error {
@@ -351,23 +434,58 @@ func (c *rabbitmqClient) DeleteExchange(ctx context.Context, name, vhost string)
 
 func (c *rabbitmqClient) GetQueue(ctx context.Context, name, vhost string) (*queuev1beta1.QueueObservation, error) {
 	path := fmt.Sprintf("/api/queues/%s/%s", url.PathEscape(vhost), url.PathEscape(name))
-	_, err := c.request(ctx, "GET", path, nil)
+	data, err := c.request(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &queuev1beta1.QueueObservation{Name: name, VHost: vhost}, nil
+	var q struct {
+		Name       string                          `json:"name"`
+		VHost      string                          `json:"vhost"`
+		Durable    bool                            `json:"durable"`
+		AutoDelete bool                            `json:"auto_delete"`
+		Exclusive  bool                            `json:"exclusive"`
+		Arguments  map[string]apiextensionsv1.JSON `json:"arguments"`
+		Messages   int                             `json:"messages"`
+		Consumers  int                             `json:"consumers"`
+	}
+	if err := json.Unmarshal(data, &q); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal queue")
+	}
+	return &queuev1beta1.QueueObservation{
+		Name:       q.Name,
+		VHost:      q.VHost,
+		Durable:    q.Durable,
+		AutoDelete: q.AutoDelete,
+		Exclusive:  q.Exclusive,
+		Arguments:  q.Arguments,
+		Messages:   q.Messages,
+		Consumers:  q.Consumers,
+	}, nil
 }
 
 func (c *rabbitmqClient) CreateQueue(ctx context.Context, spec *queuev1beta1.QueueParameters) (*queuev1beta1.QueueObservation, error) {
 	path := fmt.Sprintf("/api/queues/%s/%s", url.PathEscape(spec.VHost), url.PathEscape(spec.Name))
 	body := map[string]interface{}{
-		"durable": spec.Durable,
+		"durable":     spec.Durable,
+		"auto_delete": spec.AutoDelete,
+		"exclusive":   spec.Exclusive,
+	}
+	args := QueueArgumentsJSON(spec)
+	if len(args) > 0 {
+		body["arguments"] = jsonArgsToInterface(args)
 	}
 	_, err := c.request(ctx, "PUT", path, body)
 	if err != nil {
 		return nil, err
 	}
-	return &queuev1beta1.QueueObservation{Name: spec.Name, VHost: spec.VHost}, nil
+	return &queuev1beta1.QueueObservation{
+		Name:       spec.Name,
+		VHost:      spec.VHost,
+		Durable:    spec.Durable,
+		AutoDelete: spec.AutoDelete,
+		Exclusive:  spec.Exclusive,
+		Arguments:  args,
+	}, nil
 }
 
 func (c *rabbitmqClient) DeleteQueue(ctx context.Context, name, vhost string) error {
@@ -376,17 +494,28 @@ func (c *rabbitmqClient) DeleteQueue(ctx context.Context, name, vhost string) er
 	return err
 }
 
-func (c *rabbitmqClient) GetBinding(ctx context.Context, source, destination, vhost, routingKey string) (*bindingv1beta1.BindingObservation, error) {
-	path := fmt.Sprintf("/api/bindings/%s/e/%s/q/%s", url.PathEscape(vhost), url.PathEscape(source), url.PathEscape(destination))
+// bindingDestinationChar returns the RabbitMQ API path segment for a binding
+// destination: "q" for queues, "e" for exchanges.
+func bindingDestinationChar(destinationType string) string {
+	if destinationType == "exchange" {
+		return "e"
+	}
+	return "q"
+}
+
+func (c *rabbitmqClient) GetBinding(ctx context.Context, source, destination, vhost, routingKey, destinationType string) (*bindingv1beta1.BindingObservation, error) {
+	path := fmt.Sprintf("/api/bindings/%s/e/%s/%s/%s",
+		url.PathEscape(vhost), url.PathEscape(source), bindingDestinationChar(destinationType), url.PathEscape(destination))
 	data, err := c.request(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, err
 	}
 	var entries []struct {
-		Source      string `json:"source"`
-		Destination string `json:"destination"`
-		VHost       string `json:"vhost"`
-		RoutingKey  string `json:"routing_key"`
+		Source      string                          `json:"source"`
+		Destination string                          `json:"destination"`
+		VHost       string                          `json:"vhost"`
+		RoutingKey  string                          `json:"routing_key"`
+		Arguments   map[string]apiextensionsv1.JSON `json:"arguments"`
 	}
 	if err := json.Unmarshal(data, &entries); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal bindings")
@@ -394,10 +523,12 @@ func (c *rabbitmqClient) GetBinding(ctx context.Context, source, destination, vh
 	for _, b := range entries {
 		if b.RoutingKey == routingKey {
 			return &bindingv1beta1.BindingObservation{
-				Source:      b.Source,
-				Destination: b.Destination,
-				VHost:       b.VHost,
-				RoutingKey:  b.RoutingKey,
+				Source:          b.Source,
+				Destination:     b.Destination,
+				DestinationType: destinationType,
+				VHost:           b.VHost,
+				RoutingKey:      b.RoutingKey,
+				Arguments:       b.Arguments,
 			}, nil
 		}
 	}
@@ -405,24 +536,35 @@ func (c *rabbitmqClient) GetBinding(ctx context.Context, source, destination, vh
 }
 
 func (c *rabbitmqClient) CreateBinding(ctx context.Context, spec *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error) {
-	path := fmt.Sprintf("/api/bindings/%s/e/%s/q/%s", url.PathEscape(spec.VHost), url.PathEscape(spec.Source), url.PathEscape(spec.Destination))
+	path := fmt.Sprintf("/api/bindings/%s/e/%s/%s/%s",
+		url.PathEscape(spec.VHost), url.PathEscape(spec.Source), bindingDestinationChar(spec.DestinationType), url.PathEscape(spec.Destination))
 	body := map[string]interface{}{
 		"routing_key": spec.RoutingKey,
+	}
+	if len(spec.Arguments) > 0 {
+		body["arguments"] = jsonArgsToInterface(spec.Arguments)
 	}
 	_, err := c.request(ctx, "POST", path, body)
 	if err != nil {
 		return nil, err
 	}
+	destType := spec.DestinationType
+	if destType == "" {
+		destType = "queue"
+	}
 	return &bindingv1beta1.BindingObservation{
-		Source:      spec.Source,
-		Destination: spec.Destination,
-		VHost:       spec.VHost,
-		RoutingKey:  spec.RoutingKey,
+		Source:          spec.Source,
+		Destination:     spec.Destination,
+		DestinationType: destType,
+		VHost:           spec.VHost,
+		RoutingKey:      spec.RoutingKey,
+		Arguments:       spec.Arguments,
 	}, nil
 }
 
-func (c *rabbitmqClient) DeleteBinding(ctx context.Context, source, destination, vhost, routingKey string) error {
-	path := fmt.Sprintf("/api/bindings/%s/e/%s/q/%s/%s", url.PathEscape(vhost), url.PathEscape(source), url.PathEscape(destination), url.PathEscape(routingKey))
+func (c *rabbitmqClient) DeleteBinding(ctx context.Context, source, destination, vhost, routingKey, destinationType string) error {
+	path := fmt.Sprintf("/api/bindings/%s/e/%s/%s/%s/%s",
+		url.PathEscape(vhost), url.PathEscape(source), bindingDestinationChar(destinationType), url.PathEscape(destination), url.PathEscape(routingKey))
 	_, err := c.request(ctx, "DELETE", path, nil)
 	return err
 }

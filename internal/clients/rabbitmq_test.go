@@ -8,9 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	exchangev1beta1 "github.com/rossigee/provider-rabbitmq/apis/exchange/v1beta1"
+	queuev1beta1 "github.com/rossigee/provider-rabbitmq/apis/queue/v1beta1"
 	userv1beta1 "github.com/rossigee/provider-rabbitmq/apis/user/v1beta1"
+	vhostv1beta1 "github.com/rossigee/provider-rabbitmq/apis/vhost/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 // --- IsNotFound ---
@@ -169,7 +173,7 @@ func TestGetBinding_RoutingKeyMatched(t *testing.T) {
 			{"source": "ex", "destination": "q", "vhost": "/", "routing_key": "k2"},
 		})
 	})
-	obs, err := c.GetBinding(context.Background(), "ex", "q", "/", "k2")
+	obs, err := c.GetBinding(context.Background(), "ex", "q", "/", "k2", "queue")
 	require.NoError(t, err)
 	assert.Equal(t, "k2", obs.RoutingKey)
 }
@@ -180,7 +184,7 @@ func TestGetBinding_RoutingKeyNotFound(t *testing.T) {
 			{"source": "ex", "destination": "q", "vhost": "/", "routing_key": "k1"},
 		})
 	})
-	_, err := c.GetBinding(context.Background(), "ex", "q", "/", "missing")
+	_, err := c.GetBinding(context.Background(), "ex", "q", "/", "missing", "queue")
 	require.Error(t, err)
 	assert.True(t, IsNotFound(err))
 }
@@ -239,4 +243,160 @@ func TestGetPermission_Unmarshals(t *testing.T) {
 	assert.Equal(t, "/", obs.VHost)
 	assert.Equal(t, ".*", obs.Configure)
 	assert.Equal(t, `logs..*`, obs.Read)
+}
+
+// --- CreateExchange ---
+
+func TestCreateExchange_BodyIncludesFieldsAndArguments(t *testing.T) {
+	var received map[string]interface{}
+	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PUT", r.Method)
+		assert.Equal(t, "/api/exchanges/%2F/logs", r.RequestURI)
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&received))
+		w.WriteHeader(http.StatusNoContent)
+	})
+	spec := &exchangev1beta1.ExchangeParameters{
+		Name:       "logs",
+		VHost:      "/",
+		Type:       "topic",
+		Durable:    true,
+		AutoDelete: false,
+		Internal:   false,
+		Arguments: map[string]apiextensionsv1.JSON{
+			"alternate-exchange": {Raw: []byte(`"dlx"`)},
+			"x-max-length":       {Raw: []byte(`1000`)},
+		},
+	}
+	_, err := c.CreateExchange(context.Background(), spec)
+	require.NoError(t, err)
+	assert.Equal(t, "topic", received["type"])
+	assert.Equal(t, true, received["durable"])
+	assert.Equal(t, false, received["auto_delete"])
+	assert.Equal(t, false, received["internal"])
+	args, ok := received["arguments"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "dlx", args["alternate-exchange"])
+	assert.Equal(t, float64(1000), args["x-max-length"])
+}
+
+func TestCreateExchange_NoArgumentsOmitsKey(t *testing.T) {
+	var received map[string]interface{}
+	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&received))
+		w.WriteHeader(http.StatusNoContent)
+	})
+	spec := &exchangev1beta1.ExchangeParameters{Name: "x", VHost: "/", Type: "fanout"}
+	_, err := c.CreateExchange(context.Background(), spec)
+	require.NoError(t, err)
+	_, present := received["arguments"]
+	assert.False(t, present)
+}
+
+// --- GetVhost / CreateVhost ---
+
+func TestGetVhost_ParsesBody(t *testing.T) {
+	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/vhosts/dev", r.URL.Path)
+		_, _ = w.Write([]byte(`{"name":"dev","description":"development","tags":"tag1,tag2"}`))
+	})
+	obs, err := c.GetVhost(context.Background(), "dev")
+	require.NoError(t, err)
+	assert.Equal(t, "dev", obs.Name)
+	assert.Equal(t, "development", obs.Description)
+	assert.Equal(t, []string{"tag1", "tag2"}, obs.Tags)
+}
+
+func TestCreateVhost_BodyIncludesDescriptionAndTags(t *testing.T) {
+	var received map[string]interface{}
+	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PUT", r.Method)
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&received))
+		w.WriteHeader(http.StatusNoContent)
+	})
+	spec := &vhostv1beta1.VhostParameters{
+		Name:        "dev",
+		Description: "development",
+		Tags:        []string{"tag1", "tag2"},
+	}
+	_, err := c.CreateVhost(context.Background(), spec)
+	require.NoError(t, err)
+	assert.Equal(t, "development", received["description"])
+	assert.Equal(t, "tag1,tag2", received["tags"])
+}
+
+// --- CreateQueue / QueueArgumentsJSON ---
+
+func TestCreateQueue_BodyIncludesTypedAndFreeFormArguments(t *testing.T) {
+	var received map[string]interface{}
+	c, _ := newTestRMQClient(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PUT", r.Method)
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&received))
+		w.WriteHeader(http.StatusNoContent)
+	})
+	spec := &queuev1beta1.QueueParameters{
+		Name:             "jobs",
+		VHost:            "/",
+		Durable:          true,
+		AutoDelete:       false,
+		MessageTTL:       60000,
+		MaxLength:        10,
+		OverflowBehavior: "reject-publish",
+		Arguments: map[string]apiextensionsv1.JSON{
+			"x-single-active-consumer": {Raw: []byte(`true`)},
+		},
+	}
+	_, err := c.CreateQueue(context.Background(), spec)
+	require.NoError(t, err)
+	assert.Equal(t, true, received["durable"])
+	assert.Equal(t, false, received["auto_delete"])
+	args, ok := received["arguments"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, float64(60000), args["x-message-ttl"])
+	assert.Equal(t, float64(10), args["x-max-length"])
+	assert.Equal(t, "reject-publish", args["x-overflow"])
+	assert.Equal(t, true, args["x-single-active-consumer"])
+}
+
+func TestQueueArgumentsJSON_TypedFieldsOverrideMap(t *testing.T) {
+	spec := &queuev1beta1.QueueParameters{
+		MessageTTL: 5000,
+		Arguments: map[string]apiextensionsv1.JSON{
+			"x-message-ttl": {Raw: []byte(`9999`)},
+		},
+	}
+	args := QueueArgumentsJSON(spec)
+	assert.Equal(t, []byte(`5000`), args["x-message-ttl"].Raw)
+}
+
+func TestQueueArgumentsJSON_MatchesRoundTrippedBrokerResponse(t *testing.T) {
+	spec := &queuev1beta1.QueueParameters{
+		MessageTTL: 60000,
+	}
+	desired := QueueArgumentsJSON(spec)
+
+	// Simulate RabbitMQ echoing the declared arguments back verbatim.
+	var echoed map[string]apiextensionsv1.JSON
+	raw, err := json.Marshal(jsonArgsToInterface(desired))
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(raw, &echoed))
+
+	assert.True(t, ArgsMapsEqual(desired, echoed))
+}
+
+// --- ArgsMapsEqual / StringSetEqual ---
+
+func TestArgsMapsEqual_BytesEquivalent(t *testing.T) {
+	a := map[string]apiextensionsv1.JSON{"k": {Raw: []byte(`60000`)}}
+	b := map[string]apiextensionsv1.JSON{"k": {Raw: []byte(`60000`)}}
+	assert.True(t, ArgsMapsEqual(a, b))
+	assert.False(t, ArgsMapsEqual(a, map[string]apiextensionsv1.JSON{"k": {Raw: []byte(`"60000"`)}}))
+	assert.False(t, ArgsMapsEqual(a, map[string]apiextensionsv1.JSON{"k2": {Raw: []byte(`60000`)}}))
+	assert.True(t, ArgsMapsEqual(nil, map[string]apiextensionsv1.JSON{}))
+}
+
+func TestStringSetEqual_IgnoresOrder(t *testing.T) {
+	assert.True(t, StringSetEqual([]string{"a", "b"}, []string{"b", "a"}))
+	assert.False(t, StringSetEqual([]string{"a", "b"}, []string{"a"}))
+	assert.False(t, StringSetEqual([]string{"a"}, []string{"a", "a"}))
+	assert.True(t, StringSetEqual(nil, []string{}))
 }

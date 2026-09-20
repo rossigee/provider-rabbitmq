@@ -14,9 +14,11 @@ metadata:
   {{- end }}
 rules:
   # Core Crossplane permissions
+  # Secrets are read-only: the provider only extracts credentials (and user
+  # passwords). Write verbs would be a privilege-escalation surface.
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
@@ -28,11 +30,6 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["get", "list", "watch"]
-
-  # Crossplane core resources
-  - apiGroups: ["pkg.crossplane.io"]
-    resources: ["*"]
-    verbs: ["*"]
 
   # Provider-specific resources
   - apiGroups: ["rabbitmq.m.crossplane.io"]

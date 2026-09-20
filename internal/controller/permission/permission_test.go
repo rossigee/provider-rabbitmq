@@ -41,13 +41,13 @@ func (*noopClient) CreateQueue(_ context.Context, _ *queuev1beta1.QueueParameter
 	return nil, nil
 }
 func (*noopClient) DeleteQueue(_ context.Context, _, _ string) error { return nil }
-func (*noopClient) GetBinding(_ context.Context, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
+func (*noopClient) GetBinding(_ context.Context, _, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
 	return nil, nil
 }
 func (*noopClient) CreateBinding(_ context.Context, _ *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error) {
 	return nil, nil
 }
-func (*noopClient) DeleteBinding(_ context.Context, _, _, _, _ string) error { return nil }
+func (*noopClient) DeleteBinding(_ context.Context, _, _, _, _, _ string) error { return nil }
 func (*noopClient) GetUser(_ context.Context, _ string) (*userv1beta1.UserObservation, error) {
 	return nil, nil
 }
