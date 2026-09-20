@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
@@ -46,6 +47,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 			newServiceFn: clients.NewClient,
 		}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(name))),
 		managed.WithPollInterval(o.PollInterval),
 	}
 	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
