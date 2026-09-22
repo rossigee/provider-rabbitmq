@@ -64,6 +64,13 @@ publish.artifacts:
 	fi
 	$(foreach r,$(XPKG_REG_ORGS), $(foreach x,$(XPKGS),@$(MAKE) xpkg.release.publish.$(r).$(x)))
 	$(foreach r,$(REGISTRY_ORGS), $(foreach i,$(IMAGES),@$(MAKE) img.release.publish.$(r).$(i)))
+xpkg.release.publish.ghcr.io/rossigee.provider-rabbitmq:
+	@$(foreach p,$(XPKG_LINUX_PLATFORMS),$(MAKE) xpkg.build.provider-rabbitmq PLATFORM=$(p) || exit 1;)
+	@$(CROSSPLANE_CLI) xpkg push \
+		$(foreach p,$(XPKG_LINUX_PLATFORMS),--package-files $(XPKG_OUTPUT_DIR)/$(p)/provider-rabbitmq-$(VERSION).xpkg ) \
+		ghcr.io/rossigee/provider-rabbitmq:$(VERSION)
+	@$(OK) Pushed package ghcr.io/rossigee/provider-rabbitmq:$(VERSION)
+
 
 # Setup Package Metadata
 CROSSPLANE_VERSION = 2.0.2
@@ -173,3 +180,12 @@ local-dev: $(KIND) $(KUBECTL) $(CROSSPLANE_CLI) $(KUSTOMIZE) $(HELM3)
 e2e:
 	@$(INFO) Running e2e tests...
 	@go test -v ./test/e2e/... -timeout 1h
+
+# Neutralize the plain runtime image push. imagelight.mk injects
+# img.release.publish.<reg>.<img> as a publish.artifacts prerequisite on
+# release branches, and cluster/images img.publish would fail because the
+# runtime image is never built/tagged locally. The runtime binary is already
+# embedded in the xpkg, so publishing this image would only overwrite the
+# xpkg's package.yaml.
+img.release.publish.ghcr.io/rossigee.provider-rabbitmq:
+	@:
