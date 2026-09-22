@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
@@ -46,6 +47,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 			newServiceFn: clients.NewClient,
 		}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(name))),
 		managed.WithPollInterval(o.PollInterval),
 	}
 	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
@@ -105,12 +107,15 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get vhost")
 	}
 
+	sp := cr.Spec.ForProvider
+	upToDate := sp.Description == vhost.Description && clients.StringSetEqual(sp.Tags, vhost.Tags)
+
 	cr.Status.AtProvider = *vhost
 	cr.SetConditions(xpv1.Available())
 
 	return managed.ExternalObservation{
 		ResourceExists:    true,
-		ResourceUpToDate:  true,
+		ResourceUpToDate:  upToDate,
 		ConnectionDetails: nil,
 	}, nil
 }
@@ -138,6 +143,15 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Vhost)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotVhost)
+	}
+	vhost, err := c.service.CreateVhost(ctx, &cr.Spec.ForProvider)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update vhost")
+	}
+	cr.Status.AtProvider = *vhost
 	return managed.ExternalUpdate{}, nil
 }
 

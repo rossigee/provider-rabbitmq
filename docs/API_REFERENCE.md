@@ -4,21 +4,22 @@ Complete API specification for provider-rabbitmq v1beta1 resources.
 
 ## API Groups
 
-All RabbitMQ resources are organized by type under service-specific API groups:
+All RabbitMQ resources share the `rabbitmq.m.crossplane.io/v1beta1` API group
+and are distinguished by `kind`:
 
-- `vhost.rabbitmq.crossplane.io/v1beta1` — Virtual host management
-- `exchange.rabbitmq.crossplane.io/v1beta1` — Exchange management
-- `queue.rabbitmq.crossplane.io/v1beta1` — Queue management
-- `binding.rabbitmq.crossplane.io/v1beta1` — Queue-to-exchange bindings
-- `user.rabbitmq.crossplane.io/v1beta1` — User account management
-- `rabbitmq.crossplane.io/v1beta1` — Provider configuration
+- `Vhost` — Virtual host management
+- `Exchange` — Exchange management
+- `Queue` — Queue management
+- `Binding` — Queue-to-exchange bindings
+- `User` — User account management
+- `ProviderConfig` — Provider configuration
 
 ## Common Fields
 
 All resources share common Crossplane fields:
 
 ```yaml
-apiVersion: <service>.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: <ResourceType>
 metadata:
   name: <resource-name>           # Kubernetes resource name
@@ -44,7 +45,7 @@ status:
 Connection configuration for RabbitMQ provider.
 
 ```yaml
-apiVersion: rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: default
@@ -75,7 +76,7 @@ Virtual host - logical separation of exchanges, queues, and users.
 ### Vhost Spec
 
 ```yaml
-apiVersion: vhost.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Vhost
 metadata:
   name: my-vhost
@@ -83,7 +84,9 @@ spec:
   forProvider:
     name: my_vhost                  # Virtual host name (required)
     description: "My VHost"         # Optional description
-    tracing: false                  # Enable tracing (optional)
+    tags:                           # Optional tags (list)
+      - access
+      - development
 ```
 
 ### Vhost Fields
@@ -92,7 +95,7 @@ spec:
 |-------|------|-------------|----------|
 | `name` | string | Virtual host identifier in RabbitMQ | Yes |
 | `description` | string | Human-readable description | No |
-| `tracing` | boolean | Enable message tracing for debugging | No |
+| `tags` | array | Tags applied to the virtual host | No |
 
 ### Vhost Status
 
@@ -103,9 +106,9 @@ status:
       status: "True"
   atProvider:
     name: my_vhost
-    messages_details: {...}
-    messages: 0
-    acks_details: {...}
+    description: "My VHost"
+    tags: ["access", "development"]
+    tracerPort: 0
 ```
 
 ## Exchange Resource
@@ -115,7 +118,7 @@ Message exchange - router for messages to queues based on routing rules.
 ### Exchange Spec
 
 ```yaml
-apiVersion: exchange.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: my-exchange
@@ -149,7 +152,7 @@ spec:
 | `durable` | boolean | Persist across restarts | No (default: false) |
 | `autoDelete` | boolean | Delete when last queue unbound | No (default: false) |
 | `internal` | boolean | Restrict to internal message routing | No (default: false) |
-| `arguments` | object | Broker-specific arguments | No |
+| `arguments` | object | Broker-specific arguments (arbitrary JSON values) | No |
 
 ## Queue Resource
 
@@ -158,7 +161,7 @@ Queue - storage for messages waiting for consumption.
 ### Queue Spec
 
 ```yaml
-apiVersion: queue.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Queue
 metadata:
   name: my-queue
@@ -177,6 +180,9 @@ spec:
 
 ### Queue Arguments
 
+Queues accept arbitrary args. Arg values are typed JSON — numbers, booleans,
+strings, or nested objects — so `x-message-ttl: 86400000` works as an integer:
+
 Common queue configuration:
 
 | Argument | Type | Description |
@@ -187,6 +193,7 @@ Common queue configuration:
 | `x-dead-letter-exchange` | string | DLX for rejected messages |
 | `x-dead-letter-routing-key` | string | DLK for dead-lettered messages |
 | `x-expires` | integer (ms) | Queue auto-delete after inactivity |
+| `x-overflow` | string | `drop-head`, `reject-publish`, `reject-publish-dlx` |
 
 ### Queue Fields
 
@@ -197,7 +204,13 @@ Common queue configuration:
 | `durable` | boolean | Persist across restarts | No (default: false) |
 | `autoDelete` | boolean | Auto-delete on consumer disconnect | No (default: false) |
 | `exclusive` | boolean | Exclusive to creator connection | No (default: false) |
-| `arguments` | object | Queue configuration features | No |
+| `messageTTL` | integer (ms) | Convenience field mapped to `x-message-ttl` | No |
+| `expires` | integer (ms) | Convenience field mapped to `x-expires` | No |
+| `maxLength` | integer | Convenience field mapped to `x-max-length` | No |
+| `overflowBehavior` | string | Convenience field mapped to `x-overflow` | No |
+| `arguments` | object | Queue configuration features (arbitrary JSON values) | No |
+
+Typed convenience fields take precedence over matching entries in `arguments`.
 
 ## Binding Resource
 
@@ -206,7 +219,7 @@ Binding - connection between exchange and queue with routing rule.
 ### Binding Spec
 
 ```yaml
-apiVersion: binding.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Binding
 metadata:
   name: my-binding
@@ -229,7 +242,7 @@ spec:
 | `destination` | string | Queue or exchange name | Yes |
 | `destinationType` | string | "queue" or "exchange" | Yes |
 | `routingKey` | string | Routing key/pattern | Yes |
-| `arguments` | object | Binding arguments | No |
+| `arguments` | object | Binding arguments (arbitrary JSON values) | No |
 
 ### Routing Key Patterns
 
@@ -246,18 +259,20 @@ User account for RabbitMQ access with permissions.
 ### User Spec
 
 ```yaml
-apiVersion: user.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: User
 metadata:
   name: my-user
 spec:
   forProvider:
-    username: my_user              # Username (required)
-    password: my_password          # Password (required)
-    tags:                          # User tags/roles
-      - administrator              # Options: administrator, management, policymaker
+    name: my_user                   # Username (required)
+    passwordSecretRef:              # Password from a Secret (required for create)
+      name: rabbitmq-credentials
+      namespace: default
+      key: password
+    tags:                           # User tags/roles
+      - administrator              # Options: administrator, monitoring, policymaker, management, impersonator
       - management
-    limits: {}                      # Rate limiting
 ```
 
 ### User Tags
@@ -273,10 +288,14 @@ spec:
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `username` | string | Username identifier | Yes |
-| `password` | string | User password | Yes |
-| `tags` | array | User roles (administrator, management, policymaker) | No |
-| `limits` | object | Rate limiting configuration | No |
+| `name` | string | Username identifier | Yes |
+| `passwordSecretRef` | object | SecretKeySelector for the password (same namespace) | No |
+| `importCredentialsSecret` | object | SecretKeySelector for username/password import | No |
+| `tags` | array | User roles (administrator, monitoring, policymaker, management, impersonator) | No |
+
+Passwords are never stored in the spec. If `passwordSecretRef` changes, the
+controller reconciles the password against RabbitMQ and the observed SHA-256
+hash is recorded in `status.atProvider.passwordHash`.
 
 ## Status Fields
 
@@ -358,7 +377,7 @@ spec:
 ```yaml
 ---
 # Exchange
-apiVersion: exchange.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: prod-orders
@@ -370,7 +389,7 @@ spec:
     durable: true
 ---
 # Dead-letter exchange
-apiVersion: exchange.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Exchange
 metadata:
   name: prod-dlx
@@ -382,7 +401,7 @@ spec:
     durable: true
 ---
 # Main queue with DLX
-apiVersion: queue.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Queue
 metadata:
   name: prod-orders-main
@@ -396,7 +415,7 @@ spec:
       x-dead-letter-exchange: prod_dlx
 ---
 # Dead-letter queue
-apiVersion: queue.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Queue
 metadata:
   name: prod-orders-dlq
@@ -409,7 +428,7 @@ spec:
       x-message-ttl: 86400000       # 24 hour TTL for DLQ
 ---
 # Bindings
-apiVersion: binding.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Binding
 metadata:
   name: prod-orders-binding
@@ -421,7 +440,7 @@ spec:
     destinationType: queue
     routingKey: "order.#"
 ---
-apiVersion: binding.rabbitmq.crossplane.io/v1beta1
+apiVersion: rabbitmq.m.crossplane.io/v1beta1
 kind: Binding
 metadata:
   name: prod-dlq-binding

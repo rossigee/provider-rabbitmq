@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/event"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
@@ -39,6 +40,7 @@ func Setup(mgr ctrl.Manager, o controller.Options) error {
 	opts := []managed.ReconcilerOption{
 		managed.WithExternalConnector(&connector{kube: mgr.GetClient(), newServiceFn: clients.NewClient}),
 		managed.WithLogger(o.Logger.WithValues("controller", name)),
+		managed.WithRecorder(event.NewAPIRecorder(mgr.GetEventRecorder(name))),
 		managed.WithPollInterval(o.PollInterval),
 	}
 	if o.Features.Enabled(features.EnableAlphaManagementPolicies) {
@@ -83,9 +85,14 @@ func (c *external) Observe(ctx context.Context, mg resource.Managed) (managed.Ex
 		}
 		return managed.ExternalObservation{}, errors.Wrap(err, "failed to get queue")
 	}
+	sp := cr.Spec.ForProvider
+	upToDate := sp.Durable == queue.Durable &&
+		sp.AutoDelete == queue.AutoDelete &&
+		sp.Exclusive == queue.Exclusive &&
+		clients.ArgsMapsEqual(clients.QueueArgumentsJSON(&sp), queue.Arguments)
 	cr.Status.AtProvider = *queue
 	cr.SetConditions(xpv1.Available())
-	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: true}, nil
+	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate}, nil
 }
 
 func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.ExternalCreation, error) {
@@ -105,6 +112,15 @@ func (c *external) Create(ctx context.Context, mg resource.Managed) (managed.Ext
 }
 
 func (c *external) Update(ctx context.Context, mg resource.Managed) (managed.ExternalUpdate, error) {
+	cr, ok := mg.(*v1beta1.Queue)
+	if !ok {
+		return managed.ExternalUpdate{}, errors.New(errNotQueue)
+	}
+	queue, err := c.service.CreateQueue(ctx, &cr.Spec.ForProvider)
+	if err != nil {
+		return managed.ExternalUpdate{}, errors.Wrap(err, "failed to update queue")
+	}
+	cr.Status.AtProvider = *queue
 	return managed.ExternalUpdate{}, nil
 }
 

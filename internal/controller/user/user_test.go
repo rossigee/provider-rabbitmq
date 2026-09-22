@@ -45,13 +45,13 @@ func (*noopClient) CreateQueue(_ context.Context, _ *queuev1beta1.QueueParameter
 	return nil, nil
 }
 func (*noopClient) DeleteQueue(_ context.Context, _, _ string) error { return nil }
-func (*noopClient) GetBinding(_ context.Context, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
+func (*noopClient) GetBinding(_ context.Context, _, _, _, _, _ string) (*bindingv1beta1.BindingObservation, error) {
 	return nil, nil
 }
 func (*noopClient) CreateBinding(_ context.Context, _ *bindingv1beta1.BindingParameters) (*bindingv1beta1.BindingObservation, error) {
 	return nil, nil
 }
-func (*noopClient) DeleteBinding(_ context.Context, _, _, _, _ string) error { return nil }
+func (*noopClient) DeleteBinding(_ context.Context, _, _, _, _, _ string) error { return nil }
 func (*noopClient) GetPermission(_ context.Context, _, _ string) (*permissionv1beta1.PermissionObservation, error) {
 	return nil, nil
 }
@@ -180,6 +180,64 @@ func TestObserve_NoTags(t *testing.T) {
 	obs, err := e.Observe(context.Background(), newUser("alice"))
 	require.NoError(t, err)
 	assert.True(t, obs.ResourceUpToDate)
+}
+
+func newPasswordExternal(t *testing.T, secretVersion, recordedVersion string) *external {
+	t.Helper()
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "alice-pass", Namespace: "default", ResourceVersion: secretVersion},
+		Data:       map[string][]byte{"password": []byte("s3cr3t")},
+	}
+	fakeKube := fake.NewClientBuilder().WithScheme(s).WithObjects(secret).Build()
+	e := &external{
+		service: &userStub{
+			getUser: func(_ context.Context, _ string) (*userv1beta1.UserObservation, error) {
+				return &userv1beta1.UserObservation{Name: "alice", PasswordSecretVersion: recordedVersion}, nil
+			},
+		},
+		kube: fakeKube,
+	}
+	return e
+}
+
+func withPasswordRef(cr *userv1beta1.User) *userv1beta1.User {
+	cr.Spec.ForProvider.PasswordSecretRef = &xpv1.SecretKeySelector{
+		SecretReference: xpv1.SecretReference{Name: "alice-pass", Namespace: "default"},
+		Key:             "password",
+	}
+	return cr
+}
+
+func TestObserve_PasswordSecretUnchangedIsUpToDate(t *testing.T) {
+	e := newPasswordExternal(t, "7", "7")
+	// Simulate an already-recorded secret version.
+	cr := withPasswordRef(newUser("alice"))
+	cr.Status.AtProvider.PasswordSecretVersion = "7"
+	obs, err := e.Observe(context.Background(), cr)
+	require.NoError(t, err)
+	assert.True(t, obs.ResourceUpToDate)
+}
+
+func TestObserve_PasswordSecretRotatedIsNotUpToDate(t *testing.T) {
+	e := newPasswordExternal(t, "8", "7")
+	// Simulate an already-recorded secret version.
+	cr := withPasswordRef(newUser("alice"))
+	cr.Status.AtProvider.PasswordSecretVersion = "7"
+	obs, err := e.Observe(context.Background(), cr)
+	require.NoError(t, err)
+	assert.False(t, obs.ResourceUpToDate)
+}
+
+func TestObserve_PasswordSecretNeverAppliedIsNotUpToDate(t *testing.T) {
+	e := newPasswordExternal(t, "7", "")
+	// Simulate an already-recorded secret version.
+	cr := withPasswordRef(newUser("alice"))
+	cr.Status.AtProvider.PasswordSecretVersion = ""
+	obs, err := e.Observe(context.Background(), cr)
+	require.NoError(t, err)
+	assert.False(t, obs.ResourceUpToDate)
 }
 
 // --- Create (no password) ---

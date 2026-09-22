@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,9 +42,10 @@ type QueueParameters struct {
 	// Exclusive is only accessible to the connection that declared it
 	Exclusive bool `json:"exclusive,omitempty"`
 
-	// Arguments is a map of additional arguments for the queue
-	// Note: x-message-ttl should be passed as string (e.g., "3600000") for CRD compatibility
-	Arguments map[string]string `json:"arguments,omitempty"`
+	// Arguments is a map of additional arguments for the queue.
+	// Values are arbitrary JSON (numbers, strings, booleans, nested objects).
+	// The typed convenience fields below take precedence over matching entries.
+	Arguments map[string]apiextensionsv1.JSON `json:"arguments,omitempty"`
 
 	// MessageTTL sets the TTL for messages in the queue (in milliseconds)
 	MessageTTL int `json:"messageTTL,omitempty"`
@@ -61,18 +63,18 @@ type QueueParameters struct {
 
 // QueueObservation reflects the observed state of a RabbitMQ Queue
 type QueueObservation struct {
-	Name             string            `json:"name,omitempty"`
-	VHost            string            `json:"vhost,omitempty"`
-	Durable          bool              `json:"durable,omitempty"`
-	AutoDelete       bool              `json:"autoDelete,omitempty"`
-	Exclusive        bool              `json:"exclusive,omitempty"`
-	Arguments        map[string]string `json:"arguments,omitempty"`
-	MessageTTL       int               `json:"messageTTL,omitempty"`
-	Expires          int               `json:"expires,omitempty"`
-	MaxLength        int               `json:"maxLength,omitempty"`
-	OverflowBehavior string            `json:"overflowBehavior,omitempty"`
-	Messages         int               `json:"messages,omitempty"`
-	Consumers        int               `json:"consumers,omitempty"`
+	Name             string                          `json:"name,omitempty"`
+	VHost            string                          `json:"vhost,omitempty"`
+	Durable          bool                            `json:"durable,omitempty"`
+	AutoDelete       bool                            `json:"autoDelete,omitempty"`
+	Exclusive        bool                            `json:"exclusive,omitempty"`
+	Arguments        map[string]apiextensionsv1.JSON `json:"arguments,omitempty"`
+	MessageTTL       int                             `json:"messageTTL,omitempty"`
+	Expires          int                             `json:"expires,omitempty"`
+	MaxLength        int                             `json:"maxLength,omitempty"`
+	OverflowBehavior string                          `json:"overflowBehavior,omitempty"`
+	Messages         int                             `json:"messages,omitempty"`
+	Consumers        int                             `json:"consumers,omitempty"`
 }
 
 // A QueueSpec defines the desired state of a Queue.

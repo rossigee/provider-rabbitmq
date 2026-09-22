@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	xpv1 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,18 +48,18 @@ type ExchangeParameters struct {
 	Internal bool `json:"internal,omitempty"`
 
 	// Arguments is a map of additional arguments for the exchange
-	Arguments map[string]string `json:"arguments,omitempty"`
+	Arguments map[string]apiextensionsv1.JSON `json:"arguments,omitempty"`
 }
 
 // ExchangeObservation reflects the observed state of a RabbitMQ Exchange
 type ExchangeObservation struct {
-	Name       string            `json:"name,omitempty"`
-	VHost      string            `json:"vhost,omitempty"`
-	Type       string            `json:"type,omitempty"`
-	AutoDelete bool              `json:"autoDelete,omitempty"`
-	Durable    bool              `json:"durable,omitempty"`
-	Internal   bool              `json:"internal,omitempty"`
-	Arguments  map[string]string `json:"arguments,omitempty"`
+	Name       string                          `json:"name,omitempty"`
+	VHost      string                          `json:"vhost,omitempty"`
+	Type       string                          `json:"type,omitempty"`
+	AutoDelete bool                            `json:"autoDelete,omitempty"`
+	Durable    bool                            `json:"durable,omitempty"`
+	Internal   bool                            `json:"internal,omitempty"`
+	Arguments  map[string]apiextensionsv1.JSON `json:"arguments,omitempty"`
 }
 
 // A ExchangeSpec defines the desired state of a Exchange.

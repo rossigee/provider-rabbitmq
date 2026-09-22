@@ -95,12 +95,11 @@ spec:
                     - namespace
                     type: object
                   source:
-                    description: Source of the provider credentials.
+                    description: |-
+                      Source of the provider credentials. Only the Secret source is
+                      supported by this provider.
                     enum:
                     - Secret
-                    - InjectedIdentity
-                    - Environment
-                    - Filesystem
                     type: string
                 required:
                 - source

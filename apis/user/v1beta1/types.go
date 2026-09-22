@@ -46,6 +46,10 @@ type UserParameters struct {
 type UserObservation struct {
 	Name string   `json:"name,omitempty"`
 	Tags []string `json:"tags,omitempty"`
+	// PasswordSecretVersion is the resourceVersion of the referenced password
+	// Secret at the time the password was last applied to RabbitMQ. It is used
+	// to detect password rotation without hashing the secret value.
+	PasswordSecretVersion string `json:"passwordSecretVersion,omitempty"`
 }
 
 // A UserSpec defines the desired state of a User.
