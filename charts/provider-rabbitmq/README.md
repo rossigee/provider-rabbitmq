@@ -20,8 +20,8 @@ helm install provider-rabbitmq ./charts/provider-rabbitmq \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `image.repository` | Provider image repository | `crossplane/provider-rabbitmq` |
-| `image.tag` | Provider image tag | `v0.1.0` |
+| `image.repository` | Provider image repository | `ghcr.io/rossigee/provider-rabbitmq` |
+| `image.tag` | Provider image tag | `v0.5.3` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `resources.limits.cpu` | CPU limit | `500m` |
 | `resources.limits.memory` | Memory limit | `512Mi` |
