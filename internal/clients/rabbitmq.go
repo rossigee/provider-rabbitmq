@@ -320,10 +320,10 @@ func (c *rabbitmqClient) GetVhost(ctx context.Context, name string) (*vhostv1bet
 		return nil, err
 	}
 	var v struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Tags        string `json:"tags"`
-		TracerPort  int    `json:"tracer_port"`
+		Name        string          `json:"name"`
+		Description string          `json:"description"`
+		Tags        json.RawMessage `json:"tags"`
+		TracerPort  int             `json:"tracer_port"`
 	}
 	if err := json.Unmarshal(data, &v); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal vhost")
@@ -356,9 +356,38 @@ func (c *rabbitmqClient) CreateVhost(ctx context.Context, spec *vhostv1beta1.Vho
 	}, nil
 }
 
-// splitTags splits a RabbitMQ CSV tag string into a slice. An empty string
-// yields nil.
-func splitTags(s string) []string {
+// splitTags normalises the tag field returned by the RabbitMQ HTTP API into a
+// slice.
+//
+// RabbitMQ answers with a JSON array: "tags":["monitoring","policymaker"].
+// Some proxies and older API versions have been observed returning the
+// comma-separated string form instead, and an absent field decodes as neither.
+// Decoding straight into a string fails on the array form with
+// "cannot unmarshal array into Go struct field .tags of type string", which
+// fails Observe and therefore every reconcile.
+//
+// Note this is a read-path fix only. CreateUser and CreateVhost send tags as a
+// comma-joined string and RabbitMQ accepts that on PUT, confirmed against a
+// live instance: PUT with "tags":"monitoring,policymaker" returns 201 and the
+// subsequent GET returns the two-element array.
+func splitTags(raw json.RawMessage) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var list []string
+	if err := json.Unmarshal(raw, &list); err == nil {
+		return list
+	}
+	var csv string
+	if err := json.Unmarshal(raw, &csv); err != nil {
+		return nil
+	}
+	return splitTagsCSV(csv)
+}
+
+// splitTagsCSV splits a comma-separated tag string into a slice. An empty
+// string yields nil.
+func splitTagsCSV(s string) []string {
 	if s == "" {
 		return nil
 	}
@@ -576,18 +605,13 @@ func (c *rabbitmqClient) GetUser(ctx context.Context, name string) (*userv1beta1
 		return nil, err
 	}
 	var u struct {
-		Name string `json:"name"`
-		Tags string `json:"tags"`
+		Name string          `json:"name"`
+		Tags json.RawMessage `json:"tags"`
 	}
 	if err := json.Unmarshal(data, &u); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal user")
 	}
-	var tags []string
-	if u.Tags != "" {
-		tags = strings.Split(u.Tags, ",")
-	}
-	obs := &userv1beta1.UserObservation{Name: u.Name, Tags: tags}
-	return obs, nil
+	return &userv1beta1.UserObservation{Name: u.Name, Tags: splitTags(u.Tags)}, nil
 }
 
 func (c *rabbitmqClient) CreateUser(ctx context.Context, spec *userv1beta1.UserParameters, password string) (*userv1beta1.UserObservation, error) {
