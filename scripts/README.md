@@ -2,42 +2,16 @@
 
 Automation scripts for provider-rabbitmq development and release management.
 
-## release.sh
+## Release Preparation
 
-Automated release script that consistently updates all version references across the codebase.
+1. Update `VERSION`, `package/crossplane.yaml`, and current installation references.
+2. Add the release entry to `CHANGELOG.md`.
+3. Open a release PR from `release/v0.5.3` based on `origin/master`.
+4. After merge, create and push the exact release tag:
 
-### Usage
+   ```bash
+   git tag v0.5.3
+   git push origin v0.5.3
+   ```
 
-```bash
-# Create a new release
-./scripts/release.sh v0.8.2
-
-# The script will:
-# 1. Validate version format (vX.Y.Z)
-# 2. Check for uncommitted changes
-# 3. Update VERSION file
-# 4. Update all documentation and example references
-# 5. Create git commit with standardized message
-# 6. Create git tag
-# 7. Display next steps for pushing and monitoring
-```
-
-### What gets updated
-
-- `VERSION` file
-- `CLAUDE.md` - All version references in examples and deployment info
-- `README.md` - Build commands and examples
-- `package/crossplane.yaml` - Controller image reference
-- `examples/provider-config.yaml` - Package reference
-
-### Next steps after running
-
-1. Review changes: `git show --name-only`
-2. Push commit: `git push`
-3. Push tag: `git push origin v0.8.2`
-4. Monitor workflow: `gh run list`
-
-The GitHub Actions release workflow will automatically:
-- Build and push Docker images (`versioned` + `latest`)
-- Publish Crossplane packages
-- Create GitHub release with notes
+5. The tag-only workflow builds and publishes `linux_amd64` and `linux_arm64` packages, aliases `latest`, verifies equal digests and both architectures, and creates the GitHub Release.

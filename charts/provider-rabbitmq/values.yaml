@@ -3,8 +3,8 @@
 
 # Provider image configuration
 image:
-  repository: crossplane/provider-rabbitmq
-  tag: "v0.1.0"
+  repository: ghcr.io/rossigee/provider-rabbitmq
+  tag: "v0.5.3"
   pullPolicy: IfNotPresent
 
 # Security context
@@ -36,14 +36,14 @@ healthChecks:
   enabled: true
   liveness:
     path: /healthz
-    port: 8080
+    port: 8081
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
   readiness:
     path: /readyz
-    port: 8080
+    port: 8081
     initialDelaySeconds: 5
     periodSeconds: 5
     timeoutSeconds: 3
@@ -65,25 +65,22 @@ metrics:
 provider:
   # Package information
   package:
-    repository: crossplane/provider-rabbitmq
-    version: "v0.1.0"
+    repository: ghcr.io/rossigee/provider-rabbitmq
+    version: "v0.5.3"
 
   # Controller configuration
   controller:
     image:
-      repository: crossplane/provider-rabbitmq
-      tag: "v0.1.0"
+      repository: ghcr.io/rossigee/provider-rabbitmq
+      tag: "v0.5.3"
 
     # Number of controller replicas
     replicas: 1
 
     # Controller arguments
     args:
-      - --leader-elect
-      - --sync-period=1h
-      - --poll-interval=10m
+      - --poll=1m
       - --max-reconcile-rate=100
-      - --enable-external-secret-stores
       - --enable-management-policies
 
     # Environment variables
@@ -107,17 +104,8 @@ rbac:
   # Create RBAC resources
   create: true
 
-  # Permissions for controller
-  rules:
-    - apiGroups: [""]
-      resources: ["secrets"]
-      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-    - apiGroups: [""]
-      resources: ["events"]
-      verbs: ["create", "patch"]
-    - apiGroups: ["apiextensions.k8s.io"]
-      resources: ["customresourcedefinitions"]
-      verbs: ["get", "list", "watch"]
+  # Additional rules are intentionally empty by default.
+  rules: []
 
 # Service account
 serviceAccount:

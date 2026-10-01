@@ -11,7 +11,7 @@ A Crossplane v2 provider for managing RabbitMQ resources via the Management HTTP
 
 ## Container Registry
 
-- **Primary**: `ghcr.io/rossigee/provider-rabbitmq:v0.1.0`
+- **Primary**: `ghcr.io/rossigee/provider-rabbitmq:v0.5.3`
 
 ## Overview
 
@@ -36,7 +36,7 @@ A Crossplane provider for managing RabbitMQ resources including virtual hosts, e
 ### Installation
 
 ```bash
-kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.1.0
+kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.3
 ```
 
 ### Configuration

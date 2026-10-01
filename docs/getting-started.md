@@ -4,7 +4,7 @@ Complete guide to installing and using provider-rabbitmq v1beta1 with Crossplane
 
 ## Prerequisites
 
-- **Kubernetes cluster** with Crossplane v1.14+ installed
+- **Kubernetes cluster** with Crossplane v2.5+ installed
 - **RabbitMQ** instance with Management HTTP API enabled (usually on port 15672)
 - RabbitMQ admin credentials
 - `kubectl` configured to access your cluster
@@ -30,14 +30,14 @@ kubectl wait -n crossplane-system --for=condition=Ready pods -l app.kubernetes.i
 
 ```bash
 # Using Crossplane CLI
-kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.1.0
+kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.3
 
 # Or using Helm
 helm repo add crossplane-contrib https://charts.crossplane.io/contrib
 helm install provider-rabbitmq \
   crossplane-contrib/provider-rabbitmq \
   -n crossplane-system \
-  --version ">=0.1.0"
+  --version ">=0.5.3"
 ```
 
 Verify installation:

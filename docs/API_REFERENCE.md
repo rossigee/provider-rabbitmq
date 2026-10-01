@@ -456,7 +456,7 @@ spec:
 ## API Compatibility
 
 - **RabbitMQ Version**: 3.8+
-- **Crossplane Version**: 1.14+
+- **Crossplane Version**: 2.5.0+
 - **Kubernetes Version**: 1.20+
 
 ## Rate Limits
