@@ -30,14 +30,14 @@ kubectl wait -n crossplane-system --for=condition=Ready pods -l app.kubernetes.i
 
 ```bash
 # Using Crossplane CLI
-kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.3
+kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.4
 
 # Or using Helm
 helm repo add crossplane-contrib https://charts.crossplane.io/contrib
 helm install provider-rabbitmq \
   crossplane-contrib/provider-rabbitmq \
   -n crossplane-system \
-  --version ">=0.5.3"
+  --version ">=0.5.4"
 ```
 
 Verify installation:
