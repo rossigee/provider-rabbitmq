@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.4] - 2026-10-10
+
+### Fixed
+
+- **`User.spec.forProvider.tags` accepts valid values.** The `administrator;monitoring;policymaker;management;impersonator`
+  enum was emitted on the array schema, so no list matched it, including `["management"]`, and Crossplane
+  rejected every `User` that set tags. The enum now applies to each element (`items.enum`). The JSON API
+  is unchanged.
+
+### Changed
+
+- Go toolchain moved to 1.27.2 (`go.mod`, Makefile and workflows). golangci-lint pinned to 2.14.0, which is
+  built with Go 1.27.2.
+- Indirect `golang.org/x/*` modules updated, including `golang.org/x/net` v0.60.0.
+- CI dependency review now allow-lists `LicenseRef-scancode-google-patent-license-golang`, the licence
+  reported for the Go `x/*` modules.
+
+### Security
+
+- Fixes 11 govulncheck findings: nine in the Go 1.27.1 standard library (fixed in 1.27.2) and five in
+  `golang.org/x/net` v0.58.0 (fixed in v0.60.0).
+
 ## [v0.5.3] - 2026-09-30
 
 ### Fixed
