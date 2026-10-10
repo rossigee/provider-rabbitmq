@@ -105,13 +105,13 @@ spec:
                   tags:
                     description: Tags are the RabbitMQ tags for the user (administrator,
                       monitoring, policymaker, management)
-                    enum:
-                    - administrator
-                    - monitoring
-                    - policymaker
-                    - management
-                    - impersonator
                     items:
+                      enum:
+                      - administrator
+                      - monitoring
+                      - policymaker
+                      - management
+                      - impersonator
                       type: string
                     type: array
                 required:

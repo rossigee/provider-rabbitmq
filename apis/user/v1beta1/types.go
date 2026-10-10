@@ -38,7 +38,7 @@ type UserParameters struct {
 	ImportCredentialsSecret *xpv1.SecretKeySelector `json:"importCredentialsSecret,omitempty"`
 
 	// Tags are the RabbitMQ tags for the user (administrator, monitoring, policymaker, management)
-	// +kubebuilder:validation:Enum=administrator;monitoring;policymaker;management;impersonator
+	// +kubebuilder:validation:items:Enum=administrator;monitoring;policymaker;management;impersonator
 	Tags []string `json:"tags,omitempty"`
 }
 
