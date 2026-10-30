@@ -8,7 +8,7 @@
 ## 1. Install the provider
 
 ```bash
-kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.4
+kubectl crossplane install provider ghcr.io/rossigee/provider-rabbitmq:v0.5.5
 kubectl wait --for=condition=Installed provider.pkg.crossplane.io/provider-rabbitmq --timeout=120s
 ```
 
