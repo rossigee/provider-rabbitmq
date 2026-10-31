@@ -3,7 +3,7 @@ kind: Provider
 metadata:
   name: provider-rabbitmq
 spec:
-  package: ghcr.io/rossigee/provider-rabbitmq:v0.5.4
+  package: ghcr.io/rossigee/provider-rabbitmq:v0.5.5
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 1
   runtimeConfigRef:
